@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom";
+import { withSupabaseImageParams } from "../lib/imageUtils";
 
 export function Hero({ title, subtitle, imageUrl, ctaLabel, ctaHref }) {
+  const heroSource = withSupabaseImageParams(imageUrl, { width: 1400, quality: 82 });
+
   return (
     <section className="relative overflow-hidden pt-28 pb-20 sm:pt-32 sm:pb-28">
       <div className="absolute inset-0 gradient-hero" />
@@ -42,14 +45,19 @@ export function Hero({ title, subtitle, imageUrl, ctaLabel, ctaHref }) {
         </div>
 
         <div className="flex-1">
-          <div className="relative mx-auto aspect-[4/3] max-w-md overflow-hidden rounded-3xl border border-slate-700/70 bg-slate-900/60 shadow-elegant">
+          <div className="relative mx-auto aspect-[3/2] max-w-md overflow-hidden rounded-3xl border border-slate-700/70 bg-slate-900/60 shadow-elegant">
             <div className="absolute inset-0 bg-gradient-to-tr from-slate-950 via-transparent to-amber-500/20" />
             <img
               src={
-                imageUrl ||
+                heroSource ||
                 "https://images.pexels.com/photos/169211/pexels-photo-169211.jpeg?auto=compress&cs=tinysrgb&w=1200"
               }
               alt="Eveniment elegant organizat de Steco Events"
+              width="1500"
+              height="1000"
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
               className="h-full w-full object-cover"
             />
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent p-4 text-xs text-slate-200">

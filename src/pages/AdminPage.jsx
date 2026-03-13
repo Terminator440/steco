@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { withSupabaseImageParams } from "../lib/imageUtils";
 
 const PAGE_SLUGS = [
   { slug: "home", label: "Home" },
@@ -392,7 +393,15 @@ export function AdminPage() {
       <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
         <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-2xl sm:p-8">
           <div className="mb-6 flex flex-col items-center gap-3">
-            <img src="/steco-logo.png" alt="Steco Events" className="h-12 w-auto" />
+            <img
+              src="/steco-logo.png"
+              alt="Steco Events"
+              width="320"
+              height="128"
+              loading="eager"
+              decoding="async"
+              className="h-12 w-auto"
+            />
             <h1 className="text-center font-display text-2xl text-slate-50">Admin Steco</h1>
           </div>
 
@@ -433,7 +442,15 @@ export function AdminPage() {
     <main className="min-h-screen bg-slate-950 px-4 pb-16 pt-24 sm:px-6 lg:px-8">
       <div className="mx-auto mb-6 flex max-w-6xl items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3">
         <div className="flex items-center gap-3">
-          <img src="/steco-logo.png" alt="Steco Events" className="h-10 w-auto" />
+          <img
+            src="/steco-logo.png"
+            alt="Steco Events"
+            width="320"
+            height="128"
+            loading="lazy"
+            decoding="async"
+            className="h-10 w-auto"
+          />
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-rose-400">Steco Block Editor</p>
             <p className="text-sm text-slate-200">Construiește pagina din blocuri</p>
@@ -586,10 +603,14 @@ export function AdminPage() {
                               <p className="mt-1 text-[11px] text-slate-500">Se încarcă imaginea...</p>
                             )}
                             {data.backgroundImageUrl && (
-                              <div className="mt-2 h-24 w-36 overflow-hidden rounded-md border border-slate-200">
+                              <div className="mt-2 aspect-[3/2] w-36 overflow-hidden rounded-md border border-slate-200">
                                 <img
-                                  src={data.backgroundImageUrl}
+                                  src={withSupabaseImageParams(data.backgroundImageUrl, { width: 360, quality: 80 })}
                                   alt="Preview fundal hero"
+                                  width="360"
+                                  height="240"
+                                  loading="lazy"
+                                  decoding="async"
                                   className="h-full w-full object-cover"
                                 />
                               </div>
@@ -674,8 +695,16 @@ export function AdminPage() {
                               <p className="mt-1 text-[11px] text-slate-500">Se încarcă imaginea...</p>
                             )}
                             {data.imageUrl && (
-                              <div className="mt-2 h-24 w-36 overflow-hidden rounded-md border border-slate-200">
-                                <img src={data.imageUrl} alt={data.imageAlt || "Preview text și foto"} className="h-full w-full object-cover" />
+                              <div className="mt-2 aspect-[3/2] w-36 overflow-hidden rounded-md border border-slate-200">
+                                <img
+                                  src={withSupabaseImageParams(data.imageUrl, { width: 360, quality: 80 })}
+                                  alt={data.imageAlt || "Preview text și foto"}
+                                  width="360"
+                                  height="240"
+                                  loading="lazy"
+                                  decoding="async"
+                                  className="h-full w-full object-cover"
+                                />
                               </div>
                             )}
                           </div>
@@ -760,8 +789,16 @@ export function AdminPage() {
                                       className="block w-full text-xs text-slate-700 file:mr-2 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-2 file:py-1 file:text-slate-700"
                                     />
                                     {item.iconUrl && (
-                                      <div className="mt-1 h-10 w-10 overflow-hidden rounded-full border border-slate-200">
-                                        <img src={item.iconUrl} alt={item.title || "Icon"} className="h-full w-full object-cover" />
+                                      <div className="mt-1 aspect-square w-10 overflow-hidden rounded-full border border-slate-200">
+                                        <img
+                                          src={withSupabaseImageParams(item.iconUrl, { width: 96, quality: 80 })}
+                                          alt={item.title || "Icon"}
+                                          width="96"
+                                          height="96"
+                                          loading="lazy"
+                                          decoding="async"
+                                          className="h-full w-full object-cover"
+                                        />
                                       </div>
                                     )}
                                   </div>
@@ -842,8 +879,16 @@ export function AdminPage() {
                                   className="block w-full text-xs text-slate-700 file:mr-2 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-2 file:py-1 file:text-slate-700"
                                 />
                                 {img.url && (
-                                  <div className="mt-2 h-24 w-full overflow-hidden rounded-md border border-slate-200">
-                                    <img src={img.url} alt={img.alt || "Preview galerie"} className="h-full w-full object-cover" />
+                                  <div className="mt-2 aspect-[3/2] w-full overflow-hidden rounded-md border border-slate-200">
+                                    <img
+                                      src={withSupabaseImageParams(img.url, { width: 640, quality: 80 })}
+                                      alt={img.alt || "Preview galerie"}
+                                      width="960"
+                                      height="640"
+                                      loading="lazy"
+                                      decoding="async"
+                                      className="h-full w-full object-cover"
+                                    />
                                   </div>
                                 )}
                                 <div className="mt-2">

@@ -18,6 +18,10 @@ export function Navbar() {
           <img
             src="/steco-logo.png"
             alt="Steco Events"
+            width="320"
+            height="128"
+            loading="lazy"
+            decoding="async"
             className="h-10 w-auto"
           />
         </Link>

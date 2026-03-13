@@ -1,6 +1,16 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { Hero } from "./Hero";
+
+const TextPhotoBlock = lazy(() =>
+  import("./blocks/TextPhotoBlock").then((module) => ({ default: module.TextPhotoBlock }))
+);
+const ServicesGridBlock = lazy(() =>
+  import("./blocks/ServicesGridBlock").then((module) => ({ default: module.ServicesGridBlock }))
+);
+const GalleryBlock = lazy(() =>
+  import("./blocks/GalleryBlock").then((module) => ({ default: module.GalleryBlock }))
+);
 
 function HeroBlock({ data, fallbackTitle, fallbackSubtitle }) {
   return (
@@ -14,103 +24,10 @@ function HeroBlock({ data, fallbackTitle, fallbackSubtitle }) {
   );
 }
 
-function TextPhotoBlock({ data }) {
-  if (!data?.text && !data?.imageUrl) return null;
-
-  const imageOnLeft = data?.imagePosition === "left";
-
+function BlockFallback() {
   return (
-    <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
-      <div className="grid items-center gap-8 lg:grid-cols-2">
-        <div className={imageOnLeft ? "order-2 lg:order-2" : "order-2 lg:order-1"}>
-          <div className="glass-panel rounded-3xl p-6 sm:p-8">
-            {data.title && (
-              <h2 className="mb-3 font-display text-2xl text-slate-50 sm:text-3xl">
-                {data.title}
-              </h2>
-            )}
-            <p className="text-sm text-slate-200 sm:text-base" style={{ whiteSpace: "pre-line" }}>
-              {data.text}
-            </p>
-          </div>
-        </div>
-
-        <div className={imageOnLeft ? "order-1 lg:order-1" : "order-1 lg:order-2"}>
-          <div className="overflow-hidden rounded-3xl border border-slate-700 bg-slate-900/60">
-            <img
-              src={
-                data.imageUrl ||
-                "https://images.pexels.com/photos/265947/pexels-photo-265947.jpeg?auto=compress&cs=tinysrgb&w=1200"
-              }
-              alt={data.imageAlt || "Text și foto Steco"}
-              className="h-72 w-full object-cover sm:h-96"
-            />
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ServicesGridBlock({ data }) {
-  const items = data?.items || [];
-
-  if (!items.length) return null;
-
-  return (
-    <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
-      <div className="mb-6 text-center">
-        <h2 className="font-display text-2xl text-slate-50 sm:text-3xl">
-          {data.heading || "Serviciile noastre"}
-        </h2>
-      </div>
-
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {items.map((item, idx) => (
-          <div
-            key={item.id || idx}
-            className="glass-panel flex h-full flex-col rounded-2xl p-5 text-center"
-          >
-            {item.iconUrl && (
-              <div className="mb-3 flex justify-center">
-                <img
-                  src={item.iconUrl}
-                  alt={item.title || "Serviciu"}
-                  className="h-10 w-10 rounded-full object-cover"
-                />
-              </div>
-            )}
-            <h3 className="font-semibold text-slate-50">{item.title}</h3>
-            <p className="mt-2 text-xs text-slate-300 sm:text-sm">{item.description}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function GalleryBlock({ data }) {
-  const images = data?.images || [];
-  if (!images.length) return null;
-
-  return (
-    <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
-      <div className="mb-6 text-center">
-        <h2 className="font-display text-2xl text-slate-50 sm:text-3xl">
-          {data.heading || "Galerie foto"}
-        </h2>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {images.map((img, idx) => (
-          <div
-            key={img.url || idx}
-            className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-900/60"
-          >
-            <img src={img.url} alt={img.alt || "Eveniment Steco"} className="h-56 w-full object-cover" />
-          </div>
-        ))}
-      </div>
+    <section className="mx-auto max-w-6xl px-4 pb-10 sm:px-6 lg:px-8">
+      <div className="glass-panel rounded-2xl p-4 text-xs text-slate-300">Se încarcă secțiunea...</div>
     </section>
   );
 }
@@ -160,15 +77,27 @@ function BlockManager({ blocks, defaults }) {
         }
 
         if (block.block_type === "text_photo") {
-          return <TextPhotoBlock key={key} data={block.data} />;
+          return (
+            <Suspense key={key} fallback={<BlockFallback />}>
+              <TextPhotoBlock data={block.data} />
+            </Suspense>
+          );
         }
 
         if (block.block_type === "services_grid") {
-          return <ServicesGridBlock key={key} data={block.data} />;
+          return (
+            <Suspense key={key} fallback={<BlockFallback />}>
+              <ServicesGridBlock data={block.data} />
+            </Suspense>
+          );
         }
 
         if (block.block_type === "gallery") {
-          return <GalleryBlock key={key} data={block.data} />;
+          return (
+            <Suspense key={key} fallback={<BlockFallback />}>
+              <GalleryBlock data={block.data} />
+            </Suspense>
+          );
         }
 
         return null;
