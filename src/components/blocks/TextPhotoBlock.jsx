@@ -23,7 +23,11 @@ export function TextPhotoBlock({ data }) {
         </div>
 
         <div className={imageOnLeft ? "order-1 lg:order-1" : "order-1 lg:order-2"}>
-          <div className="aspect-[3/2] overflow-hidden rounded-3xl border border-slate-700 bg-slate-900/60">
+          <div className="relative aspect-[3/2] overflow-hidden rounded-3xl border border-slate-700 bg-slate-200/70">
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 scale-110 bg-gradient-to-br from-slate-100 to-slate-300 blur-xl"
+            />
             <img
               src={
                 imageUrl ||
@@ -34,7 +38,7 @@ export function TextPhotoBlock({ data }) {
               height="800"
               loading="lazy"
               decoding="async"
-              className="h-full w-full object-cover"
+              className="relative z-10 h-full w-full object-cover"
             />
           </div>
         </div>

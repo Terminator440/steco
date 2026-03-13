@@ -15,6 +15,7 @@ const BLOCK_TYPES = [
   { value: "services_grid", label: "Grilă Servicii" },
   { value: "gallery", label: "Galerie" }
 ];
+const STECO_LOGO_SRC = "/steco-logo.png";
 
 function getUID() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -153,9 +154,64 @@ export function AdminPage() {
   const [loadingPage, setLoadingPage] = useState(false);
   const [savingPage, setSavingPage] = useState(false);
   const [pageMessage, setPageMessage] = useState("");
+  const [pageMessageType, setPageMessageType] = useState("info");
 
   const [uploadingImagePath, setUploadingImagePath] = useState("");
   const [uploadError, setUploadError] = useState("");
+
+  async function fetchBlocksForSlug(slug) {
+    if (!supabase) {
+      return { blocks: [], message: "Supabase nu este configurat.", messageType: "error" };
+    }
+
+    const { data, error } = await supabase
+      .from("steco_page_blocks")
+      .select("id,page_slug,block_type,block_data,order_index")
+      .eq("page_slug", slug)
+      .order("order_index", { ascending: true });
+
+    if (!error) {
+      const mapped = (data || []).map((row) => ({
+        id: row.id,
+        page_slug: row.page_slug,
+        block_type: row.block_type,
+        order_index: row.order_index ?? 0,
+        data: row.block_data || {}
+      }));
+      return { blocks: mapped, message: "", messageType: "info" };
+    }
+
+    const legacy = await supabase
+      .from("steco_page_content")
+      .select("page_slug,section_type,content_json,order_index")
+      .eq("page_slug", slug)
+      .order("order_index", { ascending: true });
+
+    if (legacy.error) {
+      return {
+        blocks: [],
+        message: "Nu s-au putut încărca blocurile pentru această pagină.",
+        messageType: "error"
+      };
+    }
+
+    const mappedLegacy = (legacy.data || [])
+      .map((row) => mapLegacySectionToBlock(row))
+      .filter(Boolean)
+      .map((row, index) => ({
+        ...row,
+        page_slug: slug,
+        order_index: index
+      }));
+
+    return {
+      blocks: mappedLegacy,
+      message: mappedLegacy.length
+        ? "Am încărcat datele vechi. Publică pagina ca să le migrezi în steco_page_blocks."
+        : "Pagina nu are încă blocuri.",
+      messageType: mappedLegacy.length ? "info" : "success"
+    };
+  }
 
   useEffect(() => {
     const stored = window.localStorage.getItem("steco_session");
@@ -172,50 +228,15 @@ export function AdminPage() {
     async function loadBlocks() {
       setLoadingPage(true);
       setPageMessage("");
+      setPageMessageType("info");
 
-      const { data, error } = await supabase
-        .from("steco_page_blocks")
-        .select("id,page_slug,block_type,block_data,order_index")
-        .eq("page_slug", selectedSlug)
-        .order("order_index", { ascending: true });
-
+      const result = await fetchBlocksForSlug(selectedSlug);
       if (!isMounted) return;
 
-      if (error) {
-        const legacy = await supabase
-          .from("steco_page_content")
-          .select("page_slug,section_type,content_json,order_index")
-          .eq("page_slug", selectedSlug)
-          .order("order_index", { ascending: true });
-
-        if (legacy.error) {
-          setPageMessage("Nu s-au putut încărca blocurile pentru această pagină.");
-          setBlocks([]);
-        } else {
-          const mappedLegacy = (legacy.data || [])
-            .map((row) => mapLegacySectionToBlock(row))
-            .filter(Boolean)
-            .map((row, index) => ({
-              ...row,
-              page_slug: selectedSlug,
-              order_index: index
-            }));
-          setBlocks(mappedLegacy);
-          setPageMessage(
-            mappedLegacy.length
-              ? "Am încărcat datele vechi. Publică pagina ca să le migrezi în steco_page_blocks."
-              : "Pagina nu are încă blocuri."
-          );
-        }
-      } else {
-        const mapped = (data || []).map((row) => ({
-          id: row.id,
-          page_slug: row.page_slug,
-          block_type: row.block_type,
-          order_index: row.order_index ?? 0,
-          data: row.block_data || {}
-        }));
-        setBlocks(mapped);
+      setBlocks(result.blocks);
+      if (result.message) {
+        setPageMessage(result.message);
+        setPageMessageType(result.messageType);
       }
 
       setLoadingPage(false);
@@ -282,9 +303,11 @@ export function AdminPage() {
     e.preventDefault();
     setSavingPage(true);
     setPageMessage("");
+    setPageMessageType("info");
 
     if (!supabase) {
       setPageMessage("Supabase nu este configurat.");
+      setPageMessageType("error");
       setSavingPage(false);
       return;
     }
@@ -303,6 +326,7 @@ export function AdminPage() {
 
     if (deleteError) {
       setPageMessage("A apărut o eroare la curățarea blocurilor existente.");
+      setPageMessageType("error");
       setSavingPage(false);
       return;
     }
@@ -314,12 +338,21 @@ export function AdminPage() {
 
       if (insertError) {
         setPageMessage("A apărut o eroare la salvarea blocurilor.");
+        setPageMessageType("error");
         setSavingPage(false);
         return;
       }
     }
 
-    setPageMessage("Pagina a fost publicată cu succes.");
+    const refreshed = await fetchBlocksForSlug(selectedSlug);
+    setBlocks(refreshed.blocks);
+    if (refreshed.messageType === "error") {
+      setPageMessage("Pagina a fost publicată, dar reîmprospătarea automată a eșuat.");
+      setPageMessageType("error");
+    } else {
+      setPageMessage("Pagina a fost publicată cu succes. Conținutul a fost reîmprospătat.");
+      setPageMessageType("success");
+    }
     setSavingPage(false);
   }
 
@@ -394,7 +427,7 @@ export function AdminPage() {
         <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-2xl sm:p-8">
           <div className="mb-6 flex flex-col items-center gap-3">
             <img
-              src="/steco-logo.png"
+              src={STECO_LOGO_SRC}
               alt="Steco Events"
               width="320"
               height="128"
@@ -443,13 +476,13 @@ export function AdminPage() {
       <div className="mx-auto mb-6 flex max-w-6xl items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3">
         <div className="flex items-center gap-3">
           <img
-            src="/steco-logo.png"
+            src={STECO_LOGO_SRC}
             alt="Steco Events"
             width="320"
             height="128"
-            loading="lazy"
+            loading="eager"
             decoding="async"
-            className="h-10 w-auto"
+            className="h-12 w-auto"
           />
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-rose-400">Steco Block Editor</p>
@@ -603,7 +636,11 @@ export function AdminPage() {
                               <p className="mt-1 text-[11px] text-slate-500">Se încarcă imaginea...</p>
                             )}
                             {data.backgroundImageUrl && (
-                              <div className="mt-2 aspect-[3/2] w-36 overflow-hidden rounded-md border border-slate-200">
+                              <div className="relative mt-2 aspect-[3/2] w-36 overflow-hidden rounded-md border border-slate-200 bg-slate-200/70">
+                                <div
+                                  aria-hidden="true"
+                                  className="absolute inset-0 scale-110 bg-gradient-to-br from-slate-100 to-slate-300 blur-xl"
+                                />
                                 <img
                                   src={withSupabaseImageParams(data.backgroundImageUrl, { width: 360, quality: 80 })}
                                   alt="Preview fundal hero"
@@ -611,7 +648,7 @@ export function AdminPage() {
                                   height="240"
                                   loading="lazy"
                                   decoding="async"
-                                  className="h-full w-full object-cover"
+                                  className="relative z-10 h-full w-full object-cover"
                                 />
                               </div>
                             )}
@@ -695,7 +732,11 @@ export function AdminPage() {
                               <p className="mt-1 text-[11px] text-slate-500">Se încarcă imaginea...</p>
                             )}
                             {data.imageUrl && (
-                              <div className="mt-2 aspect-[3/2] w-36 overflow-hidden rounded-md border border-slate-200">
+                              <div className="relative mt-2 aspect-[3/2] w-36 overflow-hidden rounded-md border border-slate-200 bg-slate-200/70">
+                                <div
+                                  aria-hidden="true"
+                                  className="absolute inset-0 scale-110 bg-gradient-to-br from-slate-100 to-slate-300 blur-xl"
+                                />
                                 <img
                                   src={withSupabaseImageParams(data.imageUrl, { width: 360, quality: 80 })}
                                   alt={data.imageAlt || "Preview text și foto"}
@@ -703,7 +744,7 @@ export function AdminPage() {
                                   height="240"
                                   loading="lazy"
                                   decoding="async"
-                                  className="h-full w-full object-cover"
+                                  className="relative z-10 h-full w-full object-cover"
                                 />
                               </div>
                             )}
@@ -789,7 +830,11 @@ export function AdminPage() {
                                       className="block w-full text-xs text-slate-700 file:mr-2 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-2 file:py-1 file:text-slate-700"
                                     />
                                     {item.iconUrl && (
-                                      <div className="mt-1 aspect-square w-10 overflow-hidden rounded-full border border-slate-200">
+                                      <div className="relative mt-1 aspect-square w-10 overflow-hidden rounded-full border border-slate-200 bg-slate-200/80">
+                                        <div
+                                          aria-hidden="true"
+                                          className="absolute inset-0 scale-110 bg-gradient-to-br from-slate-100 to-slate-300 blur-lg"
+                                        />
                                         <img
                                           src={withSupabaseImageParams(item.iconUrl, { width: 96, quality: 80 })}
                                           alt={item.title || "Icon"}
@@ -797,7 +842,7 @@ export function AdminPage() {
                                           height="96"
                                           loading="lazy"
                                           decoding="async"
-                                          className="h-full w-full object-cover"
+                                          className="relative z-10 h-full w-full object-cover"
                                         />
                                       </div>
                                     )}
@@ -879,7 +924,11 @@ export function AdminPage() {
                                   className="block w-full text-xs text-slate-700 file:mr-2 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-2 file:py-1 file:text-slate-700"
                                 />
                                 {img.url && (
-                                  <div className="mt-2 aspect-[3/2] w-full overflow-hidden rounded-md border border-slate-200">
+                                  <div className="relative mt-2 aspect-[3/2] w-full overflow-hidden rounded-md border border-slate-200 bg-slate-200/70">
+                                    <div
+                                      aria-hidden="true"
+                                      className="absolute inset-0 scale-110 bg-gradient-to-br from-slate-100 to-slate-300 blur-xl"
+                                    />
                                     <img
                                       src={withSupabaseImageParams(img.url, { width: 640, quality: 80 })}
                                       alt={img.alt || "Preview galerie"}
@@ -887,7 +936,7 @@ export function AdminPage() {
                                       height="640"
                                       loading="lazy"
                                       decoding="async"
-                                      className="h-full w-full object-cover"
+                                      className="relative z-10 h-full w-full object-cover"
                                     />
                                   </div>
                                 )}
@@ -927,11 +976,30 @@ export function AdminPage() {
               {uploadError && <p className="text-xs text-red-300">{uploadError}</p>}
 
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                <button type="submit" className="btn-primary px-8" disabled={savingPage}>
+                <button type="submit" className="btn-primary inline-flex min-w-44 items-center justify-center gap-2 px-8" disabled={savingPage}>
+                  {savingPage && (
+                    <span
+                      aria-hidden="true"
+                      className="h-4 w-4 animate-spin rounded-full border-2 border-slate-900 border-t-transparent"
+                    />
+                  )}
                   {savingPage ? "Se publică..." : "Publică Pagina"}
                 </button>
 
-                {pageMessage && <p className="text-xs text-slate-300">{pageMessage}</p>}
+                {pageMessage && (
+                  <p
+                    className={[
+                      "rounded-md border px-3 py-1.5 text-xs",
+                      pageMessageType === "success" && "border-emerald-500/60 bg-emerald-950/40 text-emerald-200",
+                      pageMessageType === "error" && "border-red-500/60 bg-red-950/40 text-red-200",
+                      pageMessageType === "info" && "border-slate-600 bg-slate-900/60 text-slate-300"
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
+                    {pageMessage}
+                  </p>
+                )}
               </div>
             </form>
           )}

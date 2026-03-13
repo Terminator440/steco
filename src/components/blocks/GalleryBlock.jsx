@@ -16,8 +16,12 @@ export function GalleryBlock({ data }) {
         {images.map((img, idx) => (
           <div
             key={img.id || img.url || idx}
-            className="aspect-[3/2] overflow-hidden rounded-2xl border border-slate-700 bg-slate-900/60"
+            className="relative aspect-[3/2] overflow-hidden rounded-2xl border border-slate-700 bg-slate-200/70"
           >
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 scale-110 bg-gradient-to-br from-slate-100 to-slate-300 blur-xl"
+            />
             <img
               src={withSupabaseImageParams(img.url, { width: 900, quality: 80 })}
               alt={img.alt || "Eveniment Steco"}
@@ -25,7 +29,7 @@ export function GalleryBlock({ data }) {
               height="800"
               loading="lazy"
               decoding="async"
-              className="h-full w-full object-cover"
+              className="relative z-10 h-full w-full object-cover"
             />
           </div>
         ))}

@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
-import { withSupabaseImageParams } from "../lib/imageUtils";
+import { buildSupabaseSrcSet, withSupabaseImageParams } from "../lib/imageUtils";
 
 export function Hero({ title, subtitle, imageUrl, ctaLabel, ctaHref }) {
-  const heroSource = withSupabaseImageParams(imageUrl, { width: 1400, quality: 82 });
+  const heroSource = withSupabaseImageParams(imageUrl, { width: 960, quality: 78 });
+  const heroSrcSet = buildSupabaseSrcSet(imageUrl, [640, 960, 1280], 78);
 
   return (
     <section className="relative overflow-hidden pt-28 pb-20 sm:pt-32 sm:pb-28">
@@ -52,6 +53,8 @@ export function Hero({ title, subtitle, imageUrl, ctaLabel, ctaHref }) {
                 heroSource ||
                 "https://images.pexels.com/photos/169211/pexels-photo-169211.jpeg?auto=compress&cs=tinysrgb&w=1200"
               }
+              srcSet={heroSrcSet || undefined}
+              sizes="(max-width: 640px) 92vw, (max-width: 1024px) 46vw, 640px"
               alt="Eveniment elegant organizat de Steco Events"
               width="1500"
               height="1000"
