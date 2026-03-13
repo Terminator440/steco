@@ -5,7 +5,7 @@ import { AdminPage } from "./pages/AdminPage";
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
+    <div className="min-h-screen bg-black text-slate-50">
       <Navbar />
 
       <Routes>

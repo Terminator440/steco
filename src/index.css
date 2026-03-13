@@ -1,13 +1,17 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-:root {
-  color-scheme: dark;
+@theme {
+  --color-steco-gold: #f5c56a;
+  --color-steco-navy: #0b1b2b;
+
+  --font-sans: system-ui, sans-serif;
+  --font-display: "Playfair Display", serif;
+
+  --shadow-elegant: 0 18px 45px rgba(0, 0, 0, 0.65);
 }
 
 body {
-  @apply bg-slate-950 text-slate-50 font-sans antialiased;
+  @apply bg-black text-slate-50 font-sans antialiased;
 }
 
 .gradient-hero {
@@ -17,17 +21,16 @@ body {
 }
 
 .glass-panel {
-  @apply bg-slate-900/70 backdrop-blur-xl border border-slate-800/80 shadow-elegant;
+  @apply bg-black/70 backdrop-blur-xl border border-slate-800/80 shadow-[var(--shadow-elegant)];
 }
 
 .btn-primary {
   @apply inline-flex items-center justify-center rounded-full px-6 py-2.5 text-sm font-semibold tracking-wide
-    bg-steco-gold text-slate-950 shadow-lg shadow-yellow-500/30 hover:bg-amber-300
+    bg-[var(--color-steco-gold)] text-slate-950 shadow-lg shadow-yellow-500/30 hover:bg-amber-300
     transition-colors duration-200;
 }
 
 .btn-outline {
   @apply inline-flex items-center justify-center rounded-full px-6 py-2.5 text-sm font-semibold tracking-wide
-    border border-steco-gold/70 text-steco-gold hover:bg-steco-gold/10 transition-colors duration-200;
+    border border-[var(--color-steco-gold)]/70 text-[var(--color-steco-gold)] hover:bg-[var(--color-steco-gold)]/10 transition-colors duration-200;
 }
-

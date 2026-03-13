@@ -110,7 +110,7 @@ export function AdminPage() {
 
   if (!user) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
+      <main className="flex min-h-screen items-center justify-center bg-black px-4">
         <div className="glass-panel w-full max-w-md rounded-3xl p-6 sm:p-8">
           <h1 className="mb-6 text-center font-display text-2xl text-slate-50">Admin Steco</h1>
 
@@ -153,7 +153,7 @@ export function AdminPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 pb-16 pt-24 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-black px-4 pb-16 pt-24 sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-6xl flex-col gap-6 lg:flex-row">
         <aside className="glass-panel w-full rounded-3xl p-5 sm:p-6 lg:w-64">
           <div className="mb-6 flex items-center justify-between gap-3">

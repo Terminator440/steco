@@ -7,7 +7,7 @@ export function Hero({ title, subtitle, imageUrl }) {
 
       <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-12 px-4 sm:px-6 lg:flex-row lg:px-8">
         <div className="flex-1 space-y-6 text-center lg:text-left">
-          <p className="inline-flex items-center rounded-full border border-steco-gold/40 bg-slate-950/40 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-steco-gold/90">
+          <p className="inline-flex items-center rounded-full border border-yellow-500/40 bg-black/40 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-yellow-400">
             Steco Events · Experiențe memorabile
           </p>
 

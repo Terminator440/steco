@@ -55,7 +55,7 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle, sectionTitle 
   const imageUrl = page?.image_url || undefined;
 
   return (
-    <main className="min-h-screen bg-slate-950">
+    <main className="min-h-screen bg-black">
       <Hero title={title} subtitle={defaultSubtitle} imageUrl={imageUrl} />
 
       <section className="mx-auto max-w-5xl px-4 pb-20 sm:px-6 lg:px-8">
