@@ -2,19 +2,57 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { Hero } from "./Hero";
 
-function HeroSection({ data, fallbackTitle, fallbackSubtitle }) {
+function HeroBlock({ data, fallbackTitle, fallbackSubtitle }) {
   return (
     <Hero
       title={data?.title || fallbackTitle}
       subtitle={data?.subtitle || fallbackSubtitle}
       imageUrl={data?.backgroundImageUrl}
-      ctaLabel={data?.ctaLabel}
-      ctaHref={data?.ctaHref}
+      ctaLabel={data?.buttonLabel}
+      ctaHref={data?.buttonHref}
     />
   );
 }
 
-function ServicesGridSection({ data }) {
+function TextPhotoBlock({ data }) {
+  if (!data?.text && !data?.imageUrl) return null;
+
+  const imageOnLeft = data?.imagePosition === "left";
+
+  return (
+    <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
+      <div className="grid items-center gap-8 lg:grid-cols-2">
+        <div className={imageOnLeft ? "order-2 lg:order-2" : "order-2 lg:order-1"}>
+          <div className="glass-panel rounded-3xl p-6 sm:p-8">
+            {data.title && (
+              <h2 className="mb-3 font-display text-2xl text-slate-50 sm:text-3xl">
+                {data.title}
+              </h2>
+            )}
+            <p className="text-sm text-slate-200 sm:text-base" style={{ whiteSpace: "pre-line" }}>
+              {data.text}
+            </p>
+          </div>
+        </div>
+
+        <div className={imageOnLeft ? "order-1 lg:order-1" : "order-1 lg:order-2"}>
+          <div className="overflow-hidden rounded-3xl border border-slate-700 bg-slate-900/60">
+            <img
+              src={
+                data.imageUrl ||
+                "https://images.pexels.com/photos/265947/pexels-photo-265947.jpeg?auto=compress&cs=tinysrgb&w=1200"
+              }
+              alt={data.imageAlt || "Text și foto Steco"}
+              className="h-72 w-full object-cover sm:h-96"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ServicesGridBlock({ data }) {
   const items = data?.items || [];
 
   if (!items.length) return null;
@@ -25,10 +63,6 @@ function ServicesGridSection({ data }) {
         <h2 className="font-display text-2xl text-slate-50 sm:text-3xl">
           {data.heading || "Serviciile noastre"}
         </h2>
-        <p className="mt-2 text-sm text-slate-300 sm:text-base">
-          {data.subheading ||
-            "Concepute pentru a acoperi fiecare detaliu al evenimentului tău."}
-        </p>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -55,7 +89,7 @@ function ServicesGridSection({ data }) {
   );
 }
 
-function GallerySection({ data }) {
+function GalleryBlock({ data }) {
   const images = data?.images || [];
   if (!images.length) return null;
 
@@ -65,9 +99,6 @@ function GallerySection({ data }) {
         <h2 className="font-display text-2xl text-slate-50 sm:text-3xl">
           {data.heading || "Galerie foto"}
         </h2>
-        <p className="mt-2 text-sm text-slate-300 sm:text-base">
-          {data.subheading || "Fragmente din evenimentele Steco."}
-        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -84,28 +115,11 @@ function GallerySection({ data }) {
   );
 }
 
-function TextBlockSection({ data }) {
-  if (!data?.text) return null;
-
-  return (
-    <section className="mx-auto max-w-3xl px-4 pb-16 sm:px-6 lg:px-8">
-      <div className="glass-panel rounded-3xl p-6 sm:p-8">
-        {data.heading && (
-          <h2 className="mb-3 font-display text-xl text-slate-50 sm:text-2xl">{data.heading}</h2>
-        )}
-        <p className="text-sm text-slate-200 sm:text-base" style={{ whiteSpace: "pre-line" }}>
-          {data.text}
-        </p>
-      </div>
-    </section>
-  );
-}
-
-function SectionManager({ sections, defaults }) {
-  if (!sections?.length) {
+function BlockManager({ blocks, defaults }) {
+  if (!blocks?.length) {
     return (
       <>
-        <HeroSection data={null} fallbackTitle={defaults.title} fallbackSubtitle={defaults.subtitle} />
+        <HeroBlock data={null} fallbackTitle={defaults.title} fallbackSubtitle={defaults.subtitle} />
         <section className="mx-auto max-w-3xl px-4 pb-16 sm:px-6 lg:px-8">
           <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-4 text-center">
             <p className="text-sm text-slate-300 sm:text-base">
@@ -131,30 +145,30 @@ function SectionManager({ sections, defaults }) {
 
   return (
     <>
-      {sections.map((section) => {
-        const key = section.id || `${section.section_type}-${section.order_index}`;
+      {blocks.map((block) => {
+        const key = block.id || `${block.block_type}-${block.order_index}`;
 
-        if (section.section_type === "hero") {
+        if (block.block_type === "hero") {
           return (
-            <HeroSection
+            <HeroBlock
               key={key}
-              data={section.data}
+              data={block.data}
               fallbackTitle={defaults.title}
               fallbackSubtitle={defaults.subtitle}
             />
           );
         }
 
-        if (section.section_type === "services_grid") {
-          return <ServicesGridSection key={key} data={section.data} />;
+        if (block.block_type === "text_photo") {
+          return <TextPhotoBlock key={key} data={block.data} />;
         }
 
-        if (section.section_type === "gallery") {
-          return <GallerySection key={key} data={section.data} />;
+        if (block.block_type === "services_grid") {
+          return <ServicesGridBlock key={key} data={block.data} />;
         }
 
-        if (section.section_type === "text_block") {
-          return <TextBlockSection key={key} data={section.data} />;
+        if (block.block_type === "gallery") {
+          return <GalleryBlock key={key} data={block.data} />;
         }
 
         return null;
@@ -166,12 +180,12 @@ function SectionManager({ sections, defaults }) {
 export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [sections, setSections] = useState([]);
+  const [blocks, setBlocks] = useState([]);
 
   useEffect(() => {
     let isMounted = true;
 
-    async function fetchSections() {
+    async function fetchBlocks() {
       setLoading(true);
       setError("");
 
@@ -182,8 +196,8 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
         }
 
         const { data, error: supaError } = await supabase
-          .from("steco_page_content")
-          .select("page_slug,section_type,section_title,section_subtitle,content_json,order_index")
+          .from("steco_page_blocks")
+          .select("id,page_slug,block_type,block_data,order_index")
           .eq("page_slug", slug)
           .order("order_index", { ascending: true });
 
@@ -193,12 +207,13 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
           setError("A apărut o eroare la încărcarea conținutului.");
         } else {
           const mapped = (data || []).map((row) => ({
+            id: row.id,
             page_slug: row.page_slug,
-            section_type: row.section_type,
+            block_type: row.block_type,
             order_index: row.order_index ?? 0,
-            data: row.content_json || {}
+            data: row.block_data || {}
           }));
-          setSections(mapped);
+          setBlocks(mapped);
         }
       } catch {
         if (isMounted) {
@@ -211,7 +226,7 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
       }
     }
 
-    fetchSections();
+    fetchBlocks();
 
     return () => {
       isMounted = false;
@@ -231,13 +246,13 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
       {loading && (
         <div className="mx-auto max-w-3xl px-4 pt-24 sm:px-6 lg:px-8">
           <p className="text-xs text-slate-400">
-            Se încarcă secțiunile pentru pagina <code className="font-mono">{slug}</code>...
+            Se încarcă blocurile pentru pagina <code className="font-mono">{slug}</code>...
           </p>
         </div>
       )}
 
-      <SectionManager
-        sections={sections}
+      <BlockManager
+        blocks={blocks}
         defaults={{ title: defaultTitle, subtitle: defaultSubtitle }}
       />
     </main>
