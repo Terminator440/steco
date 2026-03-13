@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-export function Hero({ title, subtitle, imageUrl }) {
+export function Hero({ title, subtitle, imageUrl, ctaLabel, ctaHref }) {
   return (
     <section className="relative overflow-hidden pt-28 pb-20 sm:pt-32 sm:pb-28">
       <div className="absolute inset-0 gradient-hero" />
@@ -21,8 +21,8 @@ export function Hero({ title, subtitle, imageUrl }) {
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-            <Link to="/contact" className="btn-primary">
-              Programează o discuție
+            <Link to={ctaHref || "/contact"} className="btn-primary">
+              {ctaLabel || "Programează o discuție"}
             </Link>
             <Link to="/portofoliu" className="btn-outline">
               Vezi portofoliul
