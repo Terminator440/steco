@@ -20,6 +20,9 @@ export function AdminPage() {
   const [imageUrl, setImageUrl] = useState("");
   const [saveStatus, setSaveStatus] = useState("");
   const [loadingPage, setLoadingPage] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [previewUrl, setPreviewUrl] = useState("");
 
   // Autentificare simplificată: doar parolă locală "admin123"
   useEffect(() => {
@@ -50,10 +53,12 @@ export function AdminPage() {
         setTitle("");
         setContent("");
         setImageUrl("");
+        setPreviewUrl("");
       } else {
         setTitle(data.title || "");
         setContent(data.content || "");
         setImageUrl(data.image_url || "");
+        setPreviewUrl(data.image_url || "");
       }
 
       setLoadingPage(false);
@@ -261,21 +266,80 @@ export function AdminPage() {
                 <div className="sm:col-span-2">
                   <label
                     className="mb-1.5 block text-xs font-medium text-slate-300"
-                    htmlFor="imageUrl"
+                    htmlFor="imageFile"
                   >
-                    Link imagine (URL)
+                    Imagine (upload în Storage)
                   </label>
                   <input
-                    id="imageUrl"
-                    type="url"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none ring-0 ring-steco-gold/40 focus:border-steco-gold focus:ring-2"
+                    id="imageFile"
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) {
+                        return;
+                      }
+
+                      if (!supabase) {
+                        setUploadError("Supabase nu este configurat pentru upload.");
+                        return;
+                      }
+
+                      setUploadError("");
+                      setUploadingImage(true);
+
+                      const filePath = `${selectedSlug}/${Date.now()}-${file.name}`;
+
+                      const { error: uploadErr } = await supabase
+                        .storage
+                        .from("steco-images")
+                        .upload(filePath, file, {
+                          cacheControl: "3600",
+                          upsert: false
+                        });
+
+                      if (uploadErr) {
+                        setUploadError("Eroare la upload-ul imaginii. Încearcă din nou.");
+                        setUploadingImage(false);
+                        return;
+                      }
+
+                      const { data: publicData } = supabase
+                        .storage
+                        .from("steco-images")
+                        .getPublicUrl(filePath);
+
+                      const publicUrl = publicData?.publicUrl || "";
+                      setImageUrl(publicUrl);
+                      setPreviewUrl(publicUrl);
+                      setUploadingImage(false);
+                    }}
+                    className="block w-full text-sm text-slate-100 file:mr-3 file:rounded-md file:border-0 file:bg-slate-800 file:px-3 file:py-2 file:text-xs file:font-semibold file:uppercase file:tracking-[0.16em] file:text-slate-200 hover:file:bg-slate-700"
                   />
                   <p className="mt-1 text-[11px] text-slate-400">
-                    Poți folosi link-uri de la un storage (ex: Supabase Storage, Cloudinary, etc.).
+                    Fișierul va fi urcat în bucket-ul <code className="font-mono">steco-images</code> din Supabase
+                    Storage, iar link-ul public va fi salvat automat pe pagină.
                   </p>
+                  {uploadingImage && (
+                    <p className="mt-1 text-[11px] text-slate-300">Se încarcă imaginea...</p>
+                  )}
+                  {uploadError && (
+                    <p className="mt-1 text-[11px] text-red-300">{uploadError}</p>
+                  )}
+                  {previewUrl && (
+                    <div className="mt-3 flex items-center gap-3">
+                      <div className="h-16 w-24 overflow-hidden rounded-md border border-slate-700 bg-slate-900">
+                        <img
+                          src={previewUrl}
+                          alt="Preview imagine pagină"
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <p className="max-w-xs text-[11px] text-slate-400 break-all">
+                        {previewUrl}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
