@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
-import stecoLogo from "../assets/steco-logo.png";
 
 const navItems = [
   { to: "/", label: "Acasă" },
@@ -16,11 +15,7 @@ export function Navbar() {
     <header className="fixed inset-x-0 top-0 z-40 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <Link to="/" className="flex items-center gap-3">
-          <img
-            src={stecoLogo}
-            alt="Steco Events logo"
-            className="h-10 w-auto drop-shadow-lg"
-          />
+          <img src="/steco-logo.png" alt="Steco Events logo" className="h-10 w-auto drop-shadow-lg" />
         </Link>
 
         <div className="hidden items-center gap-8 text-sm font-medium text-slate-200 md:flex">

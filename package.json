@@ -15,7 +15,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "latest",
-    "autoprefixer": "latest",
+    "@tailwindcss/postcss": "latest",
     "postcss": "latest",
     "tailwindcss": "latest",
     "vite": "latest"
