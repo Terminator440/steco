@@ -183,7 +183,7 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
 
         const { data, error: supaError } = await supabase
           .from("steco_page_content")
-          .select("id,page_slug,section_type,order_index,data")
+          .select("page_slug,section_type,section_title,section_subtitle,content_json,order_index")
           .eq("page_slug", slug)
           .order("order_index", { ascending: true });
 
@@ -192,7 +192,13 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
         if (supaError) {
           setError("A apărut o eroare la încărcarea conținutului.");
         } else {
-          setSections(data || []);
+          const mapped = (data || []).map((row) => ({
+            page_slug: row.page_slug,
+            section_type: row.section_type,
+            order_index: row.order_index ?? 0,
+            data: row.content_json || {}
+          }));
+          setSections(mapped);
         }
       } catch {
         if (isMounted) {

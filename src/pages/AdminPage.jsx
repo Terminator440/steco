@@ -100,7 +100,7 @@ export function AdminPage() {
 
       const { data, error } = await supabase
         .from("steco_page_content")
-        .select("id,page_slug,section_type,order_index,data")
+        .select("page_slug,section_type,section_title,section_subtitle,content_json,order_index")
         .eq("page_slug", selectedSlug)
         .order("order_index", { ascending: true });
 
@@ -110,7 +110,13 @@ export function AdminPage() {
         setPageMessage("Nu s-au putut încărca secțiunile pentru această pagină.");
         setSections([]);
       } else {
-        setSections(data || []);
+        const mapped = (data || []).map((row) => ({
+          page_slug: row.page_slug,
+          section_type: row.section_type,
+          order_index: row.order_index ?? 0,
+          data: row.content_json || {}
+        }));
+        setSections(mapped);
       }
 
       setLoadingPage(false);
@@ -161,6 +167,40 @@ export function AdminPage() {
     });
   }
 
+  function deleteSection(index) {
+    setSections((prev) =>
+      prev
+        .filter((_, i) => i !== index)
+        .map((s, i) => ({
+          ...s,
+          order_index: i
+        }))
+    );
+  }
+
+  function getSectionTitleSubtitle(section) {
+    const data = section.data || {};
+    if (section.section_type === "hero") {
+      return {
+        section_title: data.title || null,
+        section_subtitle: data.subtitle || null
+      };
+    }
+    if (section.section_type === "services_grid" || section.section_type === "gallery") {
+      return {
+        section_title: data.heading || null,
+        section_subtitle: data.subheading || null
+      };
+    }
+    if (section.section_type === "text_block") {
+      return {
+        section_title: data.heading || null,
+        section_subtitle: null
+      };
+    }
+    return { section_title: null, section_subtitle: null };
+  }
+
   async function handlePublish(e) {
     e.preventDefault();
     setSavingPage(true);
@@ -172,17 +212,21 @@ export function AdminPage() {
       return;
     }
 
-    const payload = sections.map((section, index) => ({
-      id: section.id,
-      page_slug: selectedSlug,
-      section_type: section.section_type,
-      order_index: index,
-      data: section.data
-    }));
+    const payload = sections.map((section, index) => {
+      const { section_title, section_subtitle } = getSectionTitleSubtitle(section);
+      return {
+        page_slug: selectedSlug,
+        section_type: section.section_type,
+        section_title,
+        section_subtitle,
+        content_json: section.data || {},
+        order_index: index
+      };
+    });
 
     const { error } = await supabase
       .from("steco_page_content")
-      .upsert(payload, { onConflict: "page_slug,order_index" });
+      .upsert(payload, { onConflict: "page_slug,section_type,order_index" });
 
     if (error) {
       setPageMessage("A apărut o eroare la salvarea paginii.");
@@ -398,7 +442,7 @@ export function AdminPage() {
                     >
                       <div className="mb-3 flex items-center justify-between gap-3">
                         <div>
-                          <p className="text-[11px] uppercase tracking-[0.22em] text-yellow-400">
+                          <p className="text-[11px] uppercase tracking-[0.22em] text-rose-400">
                             {typeLabel}
                           </p>
                           <p className="text-xs text-slate-400">
@@ -409,16 +453,23 @@ export function AdminPage() {
                           <button
                             type="button"
                             onClick={() => moveSection(index, -1)}
-                            className="rounded-full border border-slate-700 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-slate-300 hover:border-yellow-500 hover:text-yellow-500"
+                            className="rounded-full border border-slate-700 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-slate-300 hover:border-rose-500 hover:text-rose-400"
                           >
                             Sus
                           </button>
                           <button
                             type="button"
                             onClick={() => moveSection(index, 1)}
-                            className="rounded-full border border-slate-700 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-slate-300 hover:border-yellow-500 hover:text-yellow-500"
+                            className="rounded-full border border-slate-700 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-slate-300 hover:border-rose-500 hover:text-rose-400"
                           >
                             Jos
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteSection(index)}
+                            className="rounded-full border border-red-700 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-red-300 hover:border-red-500 hover:text-red-400"
+                          >
+                            Șterge
                           </button>
                         </div>
                       </div>
