@@ -30,7 +30,7 @@ export function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !supabase) return;
 
     let isMounted = true;
 
@@ -90,6 +90,11 @@ export function AdminPage() {
   async function handleSave(e) {
     e.preventDefault();
     setSaveStatus("saving");
+
+    if (!supabase) {
+      setSaveStatus("error");
+      return;
+    }
 
     const { error } = await supabase.from("steco_pages").upsert(
       {
