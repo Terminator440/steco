@@ -107,12 +107,22 @@ function SectionManager({ sections, defaults }) {
       <>
         <HeroSection data={null} fallbackTitle={defaults.title} fallbackSubtitle={defaults.subtitle} />
         <section className="mx-auto max-w-3xl px-4 pb-16 sm:px-6 lg:px-8">
-          <div className="glass-panel rounded-3xl p-6 sm:p-8">
+          <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-4 text-center">
             <p className="text-sm text-slate-300 sm:text-base">
-              Nu există încă secțiuni definite pentru această pagină. Intră în{" "}
-              <span className="font-semibold text-yellow-400">Admin</span> pentru a le configura în{" "}
-              <code className="font-mono">steco_page_content</code>.
+              Nu există încă secțiuni definite pentru această pagină.
             </p>
+            <p className="text-xs text-slate-400 sm:text-sm">
+              Dacă ești administrator, poți construi prima secțiune din panoul{" "}
+              <span className="font-semibold text-rose-400">Admin</span>.
+            </p>
+            <div className="flex justify-center">
+              <a
+                href="/admin"
+                className="inline-flex items-center justify-center rounded-full border border-rose-500 px-5 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-rose-100 hover:bg-rose-500/10"
+              >
+                Construiește prima secțiune
+              </a>
+            </div>
           </div>
         </section>
       </>

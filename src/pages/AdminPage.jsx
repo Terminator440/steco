@@ -69,11 +69,9 @@ function createEmptySection(type, pageSlug, orderIndex) {
 }
 
 export function AdminPage() {
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [user, setUser] = useState(null);
+  const [isAuthed, setIsAuthed] = useState(false);
   const [authError, setAuthError] = useState("");
-  const [loadingAuth, setLoadingAuth] = useState(false);
 
   const [selectedSlug, setSelectedSlug] = useState(PAGE_SLUGS[0].slug);
   const [sections, setSections] = useState([]);
@@ -85,16 +83,14 @@ export function AdminPage() {
   const [uploadError, setUploadError] = useState("");
 
   useEffect(() => {
-    async function getUser() {
-      if (!supabase) return;
-      const { data } = await supabase.auth.getUser();
-      setUser(data.user ?? null);
+    const stored = window.localStorage.getItem("steco_session");
+    if (stored === "true") {
+      setIsAuthed(true);
     }
-    getUser();
   }, []);
 
   useEffect(() => {
-    if (!user || !supabase) return;
+    if (!isAuthed || !supabase) return;
 
     let isMounted = true;
 
@@ -125,38 +121,22 @@ export function AdminPage() {
     return () => {
       isMounted = false;
     };
-  }, [selectedSlug, user]);
+  }, [selectedSlug, isAuthed]);
 
   async function handleLogin(e) {
     e.preventDefault();
     setAuthError("");
-    setLoadingAuth(true);
-
-    if (!supabase) {
-      setAuthError("Supabase nu este configurat.");
-      setLoadingAuth(false);
+    if (password !== "admin123") {
+      setAuthError("Parolă incorectă.");
       return;
     }
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error) {
-      setAuthError("Login eșuat. Verifică email-ul și parola.");
-    } else {
-      setUser(data.user);
-    }
-
-    setLoadingAuth(false);
+    window.localStorage.setItem("steco_session", "true");
+    setIsAuthed(true);
   }
 
   async function handleLogout() {
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
-    setUser(null);
+    window.localStorage.removeItem("steco_session");
+    setIsAuthed(false);
   }
 
   function updateSection(index, newSection) {
@@ -276,30 +256,23 @@ export function AdminPage() {
     };
   }
 
-  if (!user) {
+  if (!isAuthed) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-black px-4">
         <div className="glass-panel w-full max-w-md rounded-3xl p-6 sm:p-8">
-          <h1 className="mb-6 text-center font-display text-2xl text-slate-50">Admin Steco</h1>
+          <div className="mb-6 flex flex-col items-center gap-3">
+            <img
+              src="/steco-logo.png"
+              alt="Steco Events"
+              className="h-12 w-auto"
+            />
+            <h1 className="text-center font-display text-2xl text-slate-50">Admin Steco</h1>
+          </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-slate-300" htmlFor="email">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none ring-0 ring-yellow-500/40 focus:border-yellow-500 focus:ring-2"
-              />
-            </div>
-
-            <div>
               <label className="mb-1.5 block text-xs font-medium text-slate-300" htmlFor="password">
-                Parolă
+                Parolă administrator
               </label>
               <input
                 id="password"
@@ -307,7 +280,7 @@ export function AdminPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none ring-0 ring-yellow-500/40 focus:border-yellow-500 focus:ring-2"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none ring-0 ring-rose-500/40 focus:border-rose-500 focus:ring-2"
               />
             </div>
 
@@ -319,14 +292,13 @@ export function AdminPage() {
 
             <button
               type="submit"
-              disabled={loadingAuth}
               className="btn-primary flex w-full items-center justify-center disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loadingAuth ? "Se conectează..." : "Intră în cont"}
+              Intră în cont
             </button>
 
             <p className="text-center text-[11px] text-slate-400">
-              Autentificarea folosește utilizatorii și parolele create în proiectul tău Supabase.
+              Introdu parola de administrator pentru a accesa panoul Steco.
             </p>
           </form>
         </div>
@@ -340,15 +312,13 @@ export function AdminPage() {
         <aside className="glass-panel w-full rounded-3xl p-5 sm:p-6 lg:w-64">
           <div className="mb-6 flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.26em] text-yellow-400">Admin</p>
-              <p className="text-sm font-medium text-slate-100">
-                {user.email || "Utilizator autentificat"}
-              </p>
+              <p className="text-xs uppercase tracking-[0.26em] text-rose-400">Admin</p>
+              <p className="text-sm font-medium text-slate-100">Administrator Steco</p>
             </div>
             <button
               type="button"
               onClick={handleLogout}
-              className="rounded-full border border-slate-700 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300 hover:border-yellow-500 hover:text-yellow-500"
+              className="rounded-full border border-slate-700 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300 hover:border-rose-500 hover:text-rose-400"
             >
               Logout
             </button>
@@ -361,7 +331,7 @@ export function AdminPage() {
             <select
               value={selectedSlug}
               onChange={(e) => setSelectedSlug(e.target.value)}
-              className="w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none ring-0 ring-yellow-500/40 focus:border-yellow-500 focus:ring-2"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none ring-0 ring-rose-500/40 focus:border-rose-500 focus:ring-2"
             >
               {PAGE_SLUGS.map((page) => (
                 <option key={page.slug} value={page.slug}>
@@ -371,7 +341,7 @@ export function AdminPage() {
             </select>
           </div>
 
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-400">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-400">
             Adaugă secțiune nouă
           </p>
           <div className="space-y-2">
@@ -380,7 +350,7 @@ export function AdminPage() {
                 key={type.value}
                 type="button"
                 onClick={() => handleAddSection(type.value)}
-                className="w-full rounded-full border border-slate-700 px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.22em] text-slate-200 hover:border-yellow-500 hover:text-yellow-500"
+                className="w-full rounded-full border border-slate-700 px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.22em] text-slate-200 hover:border-rose-500 hover:text-rose-400"
               >
                 {type.label}
               </button>
@@ -396,7 +366,7 @@ export function AdminPage() {
         <section className="glass-panel w-full flex-1 rounded-3xl p-5 sm:p-7">
           <div className="mb-5 flex items-center justify-between gap-4">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.26em] text-yellow-400">
+            <p className="text-[11px] uppercase tracking-[0.26em] text-rose-400">
                 Page Builder
               </p>
               <p className="text-sm text-slate-300">
@@ -404,7 +374,7 @@ export function AdminPage() {
               </p>
             </div>
             <div className="rounded-full border border-slate-700 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-slate-400">
-              slug: <span className="font-mono text-yellow-400">{selectedSlug}</span>
+              slug: <span className="font-mono text-rose-400">{selectedSlug}</span>
             </div>
           </div>
 
