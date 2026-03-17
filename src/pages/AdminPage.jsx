@@ -354,11 +354,13 @@ export function AdminPage() {
       return;
     }
 
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
     // eslint-disable-next-line no-console
     console.log("UPLOAD DECLANȘAT MANUAL");
-
-    const file = event.target.files?.[0];
-    if (!file) return;
 
     setUploadError("");
     const key = `${blockIndex}-${fieldPath}`;
