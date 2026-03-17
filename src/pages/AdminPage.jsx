@@ -297,19 +297,7 @@ export function AdminPage() {
       order_index: index
     }));
 
-    if (!payload.length) {
-      const { error: deleteAllError } = await supabase
-        .from("steco_page_blocks")
-        .delete()
-        .eq("page_slug", selectedSlug);
-
-      if (deleteAllError) {
-        setPageMessage("A apărut o eroare la ștergerea blocurilor paginii.");
-        setPageMessageType("error");
-        setSavingPage(false);
-        return;
-      }
-    } else {
+    try {
       const { error: upsertError } = await supabase
         .from("steco_page_blocks")
         .upsert(payload, {
@@ -317,41 +305,34 @@ export function AdminPage() {
         });
 
       if (upsertError) {
-        // Ajută la debug: vedem exact ce câmp lipsește sau este invalid
+        // eslint-disable-next-line no-alert
+        alert(
+          "EROARE SQL: " +
+            (upsertError.message || "") +
+            " - " +
+            (upsertError.details || "")
+        );
         // eslint-disable-next-line no-console
         console.error("DETALII EROARE SUPABASE:", upsertError);
         setPageMessage("A apărut o eroare la salvarea blocurilor.");
         setPageMessageType("error");
-        setSavingPage(false);
         return;
       }
 
-      const { error: cleanupError } = await supabase
-        .from("steco_page_blocks")
-        .delete()
-        .eq("page_slug", selectedSlug)
-        .gt("order_index", payload.length - 1);
-
-      if (cleanupError) {
-        setPageMessage(
-          "Pagina a fost publicată, dar nu am reușit să curățăm toate blocurile vechi."
-        );
-        setPageMessageType("error");
-        setSavingPage(false);
-        return;
-      }
-    }
-
-    const refreshed = await fetchBlocksForSlug(selectedSlug);
-    setBlocks(refreshed.blocks);
-    if (refreshed.messageType === "error") {
-      setPageMessage("Pagina a fost publicată, dar reîmprospătarea automată a eșuat.");
-      setPageMessageType("error");
-    } else {
+      const refreshed = await fetchBlocksForSlug(selectedSlug);
+      setBlocks(refreshed.blocks);
       setPageMessage("Pagina a fost publicată cu succes. Conținutul a fost reîmprospătat.");
       setPageMessageType("success");
+    } catch (err) {
+      // eslint-disable-next-line no-alert
+      alert("EROARE SQL: " + (err?.message || "necunoscută"));
+      // eslint-disable-next-line no-console
+      console.error("DETALII EROARE SUPABASE (catch):", err);
+      setPageMessage("A apărut o eroare la salvarea blocurilor.");
+      setPageMessageType("error");
+    } finally {
+      setSavingPage(false);
     }
-    setSavingPage(false);
   }
 
   async function handleImageUpload(pageSlug, blockIndex, fieldPath) {
