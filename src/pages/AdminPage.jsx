@@ -301,7 +301,7 @@ export function AdminPage() {
       const { error: upsertError } = await supabase
         .from("steco_page_blocks")
         .upsert(payload, {
-          onConflict: "page_slug, block_type"
+          onConflict: "page_slug, block_type, order_index"
         });
 
       if (upsertError) {
@@ -335,41 +335,61 @@ export function AdminPage() {
     }
   }
 
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
   async function handleImageUpload(pageSlug, blockIndex, fieldPath) {
     return async (event) => {
       const file = event.target.files?.[0];
       if (!file) return;
-      if (!supabase) {
-        setUploadError("Supabase nu este configurat pentru upload.");
-        return;
-      }
 
       setUploadError("");
       const key = `${blockIndex}-${fieldPath}`;
       setUploadingImagePath(key);
 
-      const filePath = `${pageSlug}/${Date.now()}-${file.name}`;
+      let imageValue = "";
 
-      const { error: uploadErr } = await supabase
-        .storage
-        .from("steco-images")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false
-        });
+      if (supabase) {
+        const filePath = `${pageSlug}/${Date.now()}-${file.name}`;
 
-      if (uploadErr) {
-        setUploadError("Eroare la upload-ul imaginii. Încearcă din nou.");
-        setUploadingImagePath("");
-        return;
+        const { error: uploadErr } = await supabase
+          .storage
+          .from("steco-images")
+          .upload(filePath, file, {
+            cacheControl: "3600",
+            upsert: false
+          });
+
+        if (!uploadErr) {
+          const { data: publicData } = supabase
+            .storage
+            .from("steco-images")
+            .getPublicUrl(filePath);
+
+          imageValue = publicData?.publicUrl || "";
+        } else {
+          // eslint-disable-next-line no-console
+          console.error("Eroare upload Supabase, fallback pe base64:", uploadErr);
+        }
       }
 
-      const { data: publicData } = supabase
-        .storage
-        .from("steco-images")
-        .getPublicUrl(filePath);
-
-      const publicUrl = publicData?.publicUrl || "";
+      if (!imageValue) {
+        try {
+          imageValue = await fileToBase64(file);
+        } catch (err) {
+          setUploadError("Eroare la prelucrarea imaginii.");
+          setUploadingImagePath("");
+          // eslint-disable-next-line no-console
+          console.error("Eroare Base64:", err);
+          return;
+        }
+      }
 
       setBlocks((prev) =>
         prev.map((block, idx) => {
@@ -377,18 +397,18 @@ export function AdminPage() {
           const newData = { ...block.data };
 
           if (fieldPath === "hero.background") {
-            newData.backgroundImageUrl = publicUrl;
+            newData.backgroundImageUrl = imageValue;
           } else if (fieldPath === "text_photo.image") {
-            newData.imageUrl = publicUrl;
+            newData.imageUrl = imageValue;
           } else if (fieldPath.startsWith("services_grid.icon.")) {
             const itemIndex = Number(fieldPath.split(".")[2]);
             const items = [...(newData.items || [])];
-            items[itemIndex] = { ...(items[itemIndex] || {}), iconUrl: publicUrl };
+            items[itemIndex] = { ...(items[itemIndex] || {}), iconUrl: imageValue };
             newData.items = items;
           } else if (fieldPath.startsWith("gallery.image.")) {
             const imageIndex = Number(fieldPath.split(".")[2]);
             const images = [...(newData.images || [])];
-            images[imageIndex] = { ...(images[imageIndex] || {}), url: publicUrl };
+            images[imageIndex] = { ...(images[imageIndex] || {}), url: imageValue };
             newData.images = images;
           }
 
