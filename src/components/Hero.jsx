@@ -5,12 +5,6 @@ export function Hero({ title, subtitle, imageUrl, ctaLabel, ctaHref, blockType =
   const heroSource = withSupabaseImageParams(imageUrl, { width: 960, quality: 78 });
   const heroSrcSet = buildSupabaseSrcSet(imageUrl, [640, 960, 1280], 78);
 
-  // Debug: verificăm că URL-ul imaginii ajunge corect din content_json
-  if (imageUrl) {
-    // eslint-disable-next-line no-console
-    console.log(`Imagine incarcata (${blockType}):`, imageUrl);
-  }
-
   return (
     <section className="relative overflow-hidden pt-28 pb-20 sm:pt-32 sm:pb-28">
       <div className="absolute inset-0 gradient-hero" />
