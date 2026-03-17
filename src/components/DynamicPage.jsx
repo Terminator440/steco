@@ -32,7 +32,38 @@ function BlockFallback() {
   );
 }
 
-function BlockManager({ blocks, defaults }) {
+function DefaultContent({ defaults, slug }) {
+  return (
+    <>
+      <HeroBlock data={null} fallbackTitle={defaults.title} fallbackSubtitle={defaults.subtitle} />
+      <section className="mx-auto max-w-3xl px-4 pb-16 sm:px-6 lg:px-8">
+        <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-4 text-center">
+          <p className="text-sm text-slate-300 sm:text-base">
+            Nu există încă secțiuni definite pentru această pagină.
+          </p>
+          <p className="text-xs text-slate-400 sm:text-sm">
+            Dacă ești administrator, poți construi prima secțiune din panoul{" "}
+            <span className="font-semibold text-rose-400">Admin</span>.
+          </p>
+          <div className="flex justify-center">
+            <a
+              href="/admin"
+              className="inline-flex items-center justify-center rounded-full border border-rose-500 px-5 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-rose-100 hover:bg-rose-500/10"
+            >
+              Construiește prima secțiune
+            </a>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function BlockManager({ blocks, defaults, slug }) {
+  if (!blocks || !blocks.length) {
+    return <DefaultContent defaults={defaults} slug={slug} />;
+  }
+
   return (
     <>
       {blocks.map((block) => {
@@ -97,7 +128,7 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
 
         const { data, error: supaError } = await supabase
           .from("steco_page_blocks")
-          .select("id,page_slug,block_type,block_data,order_index")
+          .select("*")
           .eq("page_slug", slug)
           .order("order_index", { ascending: true });
 
@@ -109,9 +140,11 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
             page_slug: row.page_slug,
             block_type: row.block_type,
             order_index: row.order_index ?? 0,
-            data: row.block_data || {}
+            data: row.content_json || row.block_data || {}
           }));
           setBlocks(mapped);
+        } else {
+          setBlocks([]);
         }
       } catch {
         // Lăsăm blocurile goale și afișăm conținutul implicit
@@ -142,6 +175,7 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
       <BlockManager
         blocks={blocks}
         defaults={{ title: defaultTitle, subtitle: defaultSubtitle }}
+        slug={slug}
       />
     </main>
   );

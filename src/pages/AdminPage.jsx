@@ -158,6 +158,7 @@ export function AdminPage() {
 
   const [uploadingImagePath, setUploadingImagePath] = useState("");
   const [uploadError, setUploadError] = useState("");
+  const [logoError, setLogoError] = useState(false);
 
   async function fetchBlocksForSlug(slug) {
     if (!supabase) {
@@ -166,7 +167,7 @@ export function AdminPage() {
 
     const { data, error } = await supabase
       .from("steco_page_blocks")
-      .select("id,page_slug,block_type,block_data,order_index")
+      .select("*")
       .eq("page_slug", slug)
       .order("order_index", { ascending: true });
 
@@ -183,7 +184,7 @@ export function AdminPage() {
       page_slug: row.page_slug,
       block_type: row.block_type,
       order_index: row.order_index ?? 0,
-      data: row.block_data || {}
+      data: row.content_json || row.block_data || {}
     }));
 
     return {
@@ -295,7 +296,7 @@ export function AdminPage() {
     const payload = blocks.map((block, index) => ({
       page_slug: selectedSlug,
       block_type: block.block_type,
-      block_data: block.data || {},
+      content_json: block.data || {},
       order_index: index
     }));
 
@@ -423,15 +424,22 @@ export function AdminPage() {
       <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
         <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-2xl sm:p-8">
           <div className="mb-6 flex flex-col items-center gap-3">
-            <img
-              src={STECO_LOGO_SRC}
-              alt="Steco Events"
-              width="320"
-              height="128"
-              loading="eager"
-              decoding="async"
-              className="h-12 w-auto"
-            />
+            {!logoError ? (
+              <img
+                src={STECO_LOGO_SRC}
+                alt="Steco Events"
+                width="320"
+                height="128"
+                loading="eager"
+                decoding="async"
+                className="h-12 w-auto"
+                onError={() => setLogoError(true)}
+              />
+            ) : (
+              <span className="text-lg font-semibold tracking-[0.16em] uppercase text-slate-50">
+                Steco Events
+              </span>
+            )}
             <h1 className="text-center font-display text-2xl text-slate-50">Admin Steco</h1>
           </div>
 
@@ -472,15 +480,22 @@ export function AdminPage() {
     <main className="min-h-screen bg-slate-950 px-4 pb-16 pt-24 sm:px-6 lg:px-8">
       <div className="mx-auto mb-6 flex max-w-6xl items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3">
         <div className="flex items-center gap-3">
-          <img
-            src={STECO_LOGO_SRC}
-            alt="Steco Events"
-            width="320"
-            height="128"
-            loading="eager"
-            decoding="async"
-            className="h-12 w-auto"
-          />
+          {!logoError ? (
+            <img
+              src={STECO_LOGO_SRC}
+              alt="Steco Events"
+              width="320"
+              height="128"
+              loading="eager"
+              decoding="async"
+              className="h-12 w-auto"
+              onError={() => setLogoError(true)}
+            />
+          ) : (
+            <span className="text-lg font-semibold tracking-[0.16em] uppercase text-slate-50">
+              Steco Events
+            </span>
+          )}
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-rose-400">Steco Block Editor</p>
             <p className="text-sm text-slate-200">Construiește pagina din blocuri</p>

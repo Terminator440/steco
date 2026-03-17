@@ -12,20 +12,28 @@ const navItems = [
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
+  const [logoError, setLogoError] = useState(false);
 
   return (
     <header className="fixed inset-x-0 top-0 z-40 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <Link to="/" className="flex items-center gap-3">
-          <img
-            src={STECO_LOGO_SRC}
-            alt="Steco Events"
-            width="320"
-            height="128"
-            loading="eager"
-            decoding="async"
-            className="h-12 w-auto shrink-0"
-          />
+          {!logoError ? (
+            <img
+              src={STECO_LOGO_SRC}
+              alt="Steco Events"
+              width="320"
+              height="128"
+              loading="eager"
+              decoding="async"
+              className="h-12 w-auto shrink-0"
+              onError={() => setLogoError(true)}
+            />
+          ) : (
+            <span className="text-lg font-semibold tracking-[0.16em] uppercase">
+              Steco Events
+            </span>
+          )}
         </Link>
 
         <div className="hidden items-center gap-8 text-sm font-medium text-slate-200 md:flex">
