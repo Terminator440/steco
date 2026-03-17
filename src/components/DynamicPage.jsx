@@ -33,33 +33,6 @@ function BlockFallback() {
 }
 
 function BlockManager({ blocks, defaults }) {
-  if (!blocks?.length) {
-    return (
-      <>
-        <HeroBlock data={null} fallbackTitle={defaults.title} fallbackSubtitle={defaults.subtitle} />
-        <section className="mx-auto max-w-3xl px-4 pb-16 sm:px-6 lg:px-8">
-          <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-4 text-center">
-            <p className="text-sm text-slate-300 sm:text-base">
-              Nu există încă secțiuni definite pentru această pagină.
-            </p>
-            <p className="text-xs text-slate-400 sm:text-sm">
-              Dacă ești administrator, poți construi prima secțiune din panoul{" "}
-              <span className="font-semibold text-rose-400">Admin</span>.
-            </p>
-            <div className="flex justify-center">
-              <a
-                href="/admin"
-                className="inline-flex items-center justify-center rounded-full border border-rose-500 px-5 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-rose-100 hover:bg-rose-500/10"
-              >
-                Construiește prima secțiune
-              </a>
-            </div>
-          </div>
-        </section>
-      </>
-    );
-  }
-
   return (
     <>
       {blocks.map((block) => {
@@ -108,7 +81,6 @@ function BlockManager({ blocks, defaults }) {
 
 export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [blocks, setBlocks] = useState([]);
 
   useEffect(() => {
@@ -116,7 +88,6 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
 
     async function fetchBlocks() {
       setLoading(true);
-      setError("");
 
       try {
         if (!supabase) {
@@ -132,9 +103,7 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
 
         if (!isMounted) return;
 
-        if (supaError) {
-          setError("A apărut o eroare la încărcarea conținutului.");
-        } else {
+        if (!supaError) {
           const mapped = (data || []).map((row) => ({
             id: row.id,
             page_slug: row.page_slug,
@@ -145,9 +114,7 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
           setBlocks(mapped);
         }
       } catch {
-        if (isMounted) {
-          setError("Nu s-a putut încărca conținutul.");
-        }
+        // Lăsăm blocurile goale și afișăm conținutul implicit
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -164,14 +131,6 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
 
   return (
     <main className="min-h-screen bg-black">
-      {error && (
-        <div className="mx-auto max-w-3xl px-4 pt-24 sm:px-6 lg:px-8">
-          <p className="mb-4 rounded-lg border border-red-500/60 bg-red-950/40 px-3 py-2 text-xs text-red-100">
-            {error}
-          </p>
-        </div>
-      )}
-
       {loading && (
         <div className="mx-auto max-w-3xl px-4 pt-24 sm:px-6 lg:px-8">
           <p className="text-xs text-slate-400">

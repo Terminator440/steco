@@ -170,24 +170,7 @@ export function AdminPage() {
       .eq("page_slug", slug)
       .order("order_index", { ascending: true });
 
-    if (!error) {
-      const mapped = (data || []).map((row) => ({
-        id: row.id,
-        page_slug: row.page_slug,
-        block_type: row.block_type,
-        order_index: row.order_index ?? 0,
-        data: row.block_data || {}
-      }));
-      return { blocks: mapped, message: "", messageType: "info" };
-    }
-
-    const legacy = await supabase
-      .from("steco_page_content")
-      .select("page_slug,section_type,content_json,order_index")
-      .eq("page_slug", slug)
-      .order("order_index", { ascending: true });
-
-    if (legacy.error) {
+    if (error) {
       return {
         blocks: [],
         message: "Nu s-au putut încărca blocurile pentru această pagină.",
@@ -195,21 +178,18 @@ export function AdminPage() {
       };
     }
 
-    const mappedLegacy = (legacy.data || [])
-      .map((row) => mapLegacySectionToBlock(row))
-      .filter(Boolean)
-      .map((row, index) => ({
-        ...row,
-        page_slug: slug,
-        order_index: index
-      }));
+    const mapped = (data || []).map((row) => ({
+      id: row.id,
+      page_slug: row.page_slug,
+      block_type: row.block_type,
+      order_index: row.order_index ?? 0,
+      data: row.block_data || {}
+    }));
 
     return {
-      blocks: mappedLegacy,
-      message: mappedLegacy.length
-        ? "Am încărcat datele vechi. Publică pagina ca să le migrezi în steco_page_blocks."
-        : "Pagina nu are încă blocuri.",
-      messageType: mappedLegacy.length ? "info" : "success"
+      blocks: mapped,
+      message: mapped.length ? "" : "Pagina nu are încă blocuri.",
+      messageType: mapped.length ? "info" : "success"
     };
   }
 
@@ -319,25 +299,42 @@ export function AdminPage() {
       order_index: index
     }));
 
-    const { error: deleteError } = await supabase
-      .from("steco_page_blocks")
-      .delete()
-      .eq("page_slug", selectedSlug);
-
-    if (deleteError) {
-      setPageMessage("A apărut o eroare la curățarea blocurilor existente.");
-      setPageMessageType("error");
-      setSavingPage(false);
-      return;
-    }
-
-    if (payload.length) {
-      const { error: insertError } = await supabase
+    if (!payload.length) {
+      const { error: deleteAllError } = await supabase
         .from("steco_page_blocks")
-        .insert(payload);
+        .delete()
+        .eq("page_slug", selectedSlug);
 
-      if (insertError) {
+      if (deleteAllError) {
+        setPageMessage("A apărut o eroare la ștergerea blocurilor paginii.");
+        setPageMessageType("error");
+        setSavingPage(false);
+        return;
+      }
+    } else {
+      const { error: upsertError } = await supabase
+        .from("steco_page_blocks")
+        .upsert(payload, {
+          onConflict: "page_slug,order_index"
+        });
+
+      if (upsertError) {
         setPageMessage("A apărut o eroare la salvarea blocurilor.");
+        setPageMessageType("error");
+        setSavingPage(false);
+        return;
+      }
+
+      const { error: cleanupError } = await supabase
+        .from("steco_page_blocks")
+        .delete()
+        .eq("page_slug", selectedSlug)
+        .gt("order_index", payload.length - 1);
+
+      if (cleanupError) {
+        setPageMessage(
+          "Pagina a fost publicată, dar nu am reușit să curățăm toate blocurile vechi."
+        );
         setPageMessageType("error");
         setSavingPage(false);
         return;
