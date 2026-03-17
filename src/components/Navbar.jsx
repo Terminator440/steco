@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 
-const STECO_LOGO_SRC = "/steco-logo.png";
-
 const navItems = [
   { to: "/", label: "Acasă" },
   { to: "/servicii", label: "Servicii" },
@@ -12,28 +10,14 @@ const navItems = [
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
-  const [logoError, setLogoError] = useState(false);
 
   return (
     <header className="fixed inset-x-0 top-0 z-40 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <Link to="/" className="flex items-center gap-3">
-          {!logoError ? (
-            <img
-              src={STECO_LOGO_SRC}
-              alt="Steco Events"
-              width="320"
-              height="128"
-              loading="eager"
-              decoding="async"
-              className="h-12 w-auto shrink-0"
-              onError={() => setLogoError(true)}
-            />
-          ) : (
-            <span className="text-lg font-display tracking-[0.18em] uppercase">
-              STECO EVENTS
-            </span>
-          )}
+          <span className="text-lg font-display font-bold tracking-[0.18em] uppercase">
+            STECO EVENTS
+          </span>
         </Link>
 
         <div className="hidden items-center gap-8 text-sm font-medium text-slate-200 md:flex">
