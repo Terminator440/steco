@@ -344,7 +344,7 @@ export function AdminPage() {
     });
   }
 
-  async function handleImageUpload(pageSlug, blockIndex, fieldPath) {
+  function handleImageUpload(pageSlug, blockIndex, fieldPath) {
     return async (event) => {
       const file = event.target.files?.[0];
       if (!file) return;
