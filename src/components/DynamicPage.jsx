@@ -134,19 +134,22 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
 
         if (!isMounted) return;
 
-        if (!supaError) {
-          const mapped = (data || []).map((row) => ({
-            id: row.id,
-            page_slug: row.page_slug,
-            block_type: row.block_type,
-            order_index: row.order_index ?? 0,
-            data: row.content_json || row.block_data || {}
-          }));
-          setBlocks(mapped);
-        } else {
+        if (supaError) {
+          console.error("[Steco] Eroare la încărcarea blocurilor:", supaError.message);
           setBlocks([]);
+          return;
         }
-      } catch {
+
+        const mapped = (data || []).map((row) => ({
+          id: row.id,
+          page_slug: row.page_slug,
+          block_type: row.block_type,
+          order_index: row.order_index ?? 0,
+          data: row.content_json || row.block_data || {}
+        }));
+        setBlocks(mapped);
+      } catch (err) {
+        console.error("[Steco] Eroare neașteptată la încărcarea blocurilor:", err);
         // Lăsăm blocurile goale și afișăm conținutul implicit
       } finally {
         if (isMounted) {

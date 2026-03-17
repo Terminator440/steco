@@ -30,8 +30,8 @@ export function Navbar() {
               onError={() => setLogoError(true)}
             />
           ) : (
-            <span className="text-lg font-semibold tracking-[0.16em] uppercase">
-              Steco Events
+            <span className="text-lg font-display tracking-[0.18em] uppercase">
+              STECO EVENTS
             </span>
           )}
         </Link>
