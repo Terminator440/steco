@@ -348,6 +348,9 @@ export function AdminPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // eslint-disable-next-line no-console
+    console.log("UPLOAD DECLANȘAT MANUAL");
+
     setUploadError("");
     const key = `${blockIndex}-${fieldPath}`;
     setUploadingImagePath(key);
@@ -393,9 +396,6 @@ export function AdminPage() {
         return;
       }
     }
-
-    // eslint-disable-next-line no-console
-    console.log("Imagine salvată în pagina: " + currentPage + " pentru blocul: " + blockType, imageValue);
 
     setBlocks((prev) =>
       prev.map((block, idx) => {
