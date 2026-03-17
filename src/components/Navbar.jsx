@@ -5,6 +5,8 @@ const navItems = [
   { to: "/", label: "Acasă" },
   { to: "/servicii", label: "Servicii" },
   { to: "/portofoliu", label: "Portofoliu" },
+  { to: "/misiunea-noastra", label: "Misiunea Noastră" },
+  { to: "/participanti", label: "Participanți" },
   { to: "/contact", label: "Contact" }
 ];
 
