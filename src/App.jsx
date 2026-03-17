@@ -62,6 +62,30 @@ export default function App() {
         />
 
         <Route
+          path="/misiunea-noastra"
+          element={
+            <DynamicPage
+              slug="misiunea-noastra"
+              defaultTitle="Misiunea noastră."
+              defaultSubtitle="Descoperă principiile și valorile care stau la baza fiecărui eveniment organizat de Steco."
+              sectionTitle="Misiunea noastră"
+            />
+          }
+        />
+
+        <Route
+          path="/participanti"
+          element={
+            <DynamicPage
+              slug="participanti"
+              defaultTitle="Participanți și invitați."
+              defaultSubtitle="Galerie cu persoanele care ne-au fost alături în evenimentele Steco."
+              sectionTitle="Participanți"
+            />
+          }
+        />
+
+        <Route
           path="/admin"
           element={
             <Suspense

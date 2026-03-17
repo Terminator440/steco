@@ -6,13 +6,17 @@ const PAGE_SLUGS = [
   { slug: "home", label: "Home" },
   { slug: "servicii", label: "Servicii" },
   { slug: "portofoliu", label: "Portofoliu" },
-  { slug: "contact", label: "Contact" }
+  { slug: "contact", label: "Contact" },
+  { slug: "misiunea-noastra", label: "Misiunea Noastră" },
+  { slug: "participanti", label: "Participanți" }
 ];
 
 const BLOCK_TYPES = [
   { value: "hero", label: "Hero" },
   { value: "text_photo", label: "Text & Foto" },
   { value: "services_grid", label: "Grilă Servicii" },
+  { value: "text_section", label: "Secțiune Text" },
+  { value: "participants_grid", label: "Grilă Participanți" },
   { value: "gallery", label: "Galerie" }
 ];
 function getUID() {
@@ -49,6 +53,29 @@ function createEmptyBlock(type, pageSlug, orderIndex) {
         imageUrl: "",
         imageAlt: "",
         imagePosition: "right"
+      }
+    };
+  }
+
+  if (type === "text_section") {
+    return {
+      page_slug: pageSlug,
+      block_type: "text_section",
+      order_index: orderIndex,
+      data: {
+        text: ""
+      }
+    };
+  }
+
+  if (type === "participants_grid") {
+    return {
+      page_slug: pageSlug,
+      block_type: "participants_grid",
+      order_index: orderIndex,
+      data: {
+        heading: "",
+        participants: []
       }
     };
   }
@@ -98,6 +125,27 @@ function mapLegacySectionToBlock(row) {
       data: {
         heading: row.content_json?.heading || "",
         items: row.content_json?.items || []
+      }
+    };
+  }
+
+  if (row.section_type === "text_section") {
+    return {
+      block_type: "text_section",
+      order_index: row.order_index ?? 0,
+      data: {
+        text: row.content_json?.text || ""
+      }
+    };
+  }
+
+  if (row.section_type === "participants_grid") {
+    return {
+      block_type: "participants_grid",
+      order_index: row.order_index ?? 0,
+      data: {
+        heading: row.content_json?.heading || "",
+        participants: row.content_json?.participants || []
       }
     };
   }
@@ -420,6 +468,14 @@ export function AdminPage() {
           const items = [...(newData.items || [])];
           items[itemIndex] = { ...(items[itemIndex] || {}), iconUrl: imageValue };
           newData.items = items;
+        } else if (fieldPath.startsWith("participants_grid.photo.")) {
+          const participantIndex = Number(fieldPath.split(".")[2]);
+          const participants = [...(newData.participants || [])];
+          participants[participantIndex] = {
+            ...(participants[participantIndex] || {}),
+            photoUrl: imageValue
+          };
+          newData.participants = participants;
         } else if (fieldPath.startsWith("gallery.image.")) {
           const imageIndex = Number(fieldPath.split(".")[2]);
           const images = [...(newData.images || [])];
@@ -836,6 +892,138 @@ export function AdminPage() {
                                       }}
                                       className="w-full border-b border-slate-300 bg-transparent py-1 text-sm outline-none focus:border-rose-500"
                                     />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {block.block_type === "text_section" && (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-slate-600">
+                              Conținut secțiune
+                            </label>
+                            <textarea
+                              rows={8}
+                              value={data.text || ""}
+                              onChange={(e) => updateBlock(index, { data: { ...data, text: e.target.value } })}
+                              className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-rose-300 focus:ring-2"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {block.block_type === "participants_grid" && (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-slate-600">
+                              Titlu Secțiune Participanți
+                            </label>
+                            <input
+                              type="text"
+                              value={data.heading || ""}
+                              onChange={(e) => updateBlock(index, { data: { ...data, heading: e.target.value } })}
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-300"
+                              placeholder="Ex: Participanți"
+                            />
+                          </div>
+
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                Lista Participanți
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const participants = [...(data.participants || [])];
+                                  participants.push({ id: getUID(), name: "", photoUrl: "" });
+                                  updateBlock(index, { data: { ...data, participants } });
+                                }}
+                                className="rounded-full bg-slate-900 px-3 py-1 text-[10px] font-bold uppercase text-white hover:bg-slate-800"
+                              >
+                                + Adaugă Participant
+                              </button>
+                            </div>
+
+                            {(data.participants || []).map((participant, participantIndex) => (
+                              <div
+                                key={participant.id || participantIndex}
+                                className="relative rounded-xl border border-slate-200 bg-slate-50 p-4"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const participants = (data.participants || []).filter(
+                                      (_, i) => i !== participantIndex
+                                    );
+                                    updateBlock(index, { data: { ...data, participants } });
+                                  }}
+                                  className="absolute right-2 top-2 text-slate-400 hover:text-red-500"
+                                >
+                                  <TrashIcon />
+                                </button>
+
+                                <div className="grid gap-3 sm:grid-cols-[2fr,3fr]">
+                                  <div>
+                                    <label className="block text-[10px] font-bold uppercase text-slate-500">
+                                      Nume Participant
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={participant.name || ""}
+                                      onChange={(e) => {
+                                        const participants = [...(data.participants || [])];
+                                        participants[participantIndex] = {
+                                          ...(participants[participantIndex] || {}),
+                                          name: e.target.value
+                                        };
+                                        updateBlock(index, { data: { ...data, participants } });
+                                      }}
+                                      className="w-full border-b border-slate-300 bg-transparent py-1 text-sm font-semibold outline-none focus:border-rose-500"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[10px] font-bold uppercase text-slate-500">
+                                      Fotografie
+                                    </label>
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      onChange={(e) =>
+                                        handleImageUpload(
+                                          e,
+                                          selectedSlug,
+                                          index,
+                                          `participants_grid.photo.${participantIndex}`
+                                        )
+                                      }
+                                      className="block w-full text-xs text-slate-700 file:mr-2 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-2 file:py-1 file:text-slate-700"
+                                    />
+                                    {participant.photoUrl && (
+                                      <div className="relative mt-2 aspect-square w-20 overflow-hidden rounded-full border border-slate-200 bg-slate-200/70">
+                                        <div
+                                          aria-hidden="true"
+                                          className="absolute inset-0 scale-110 bg-gradient-to-br from-slate-100 to-slate-300 blur-xl"
+                                        />
+                                        <img
+                                          src={withSupabaseImageParams(participant.photoUrl, {
+                                            width: 160,
+                                            quality: 80
+                                          })}
+                                          alt={participant.name || "Participant"}
+                                          width="160"
+                                          height="160"
+                                          loading="lazy"
+                                          decoding="async"
+                                          className="relative z-10 h-full w-full object-cover"
+                                        />
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </div>

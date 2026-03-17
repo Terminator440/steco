@@ -11,6 +11,12 @@ const ServicesGridBlock = lazy(() =>
 const GalleryBlock = lazy(() =>
   import("./blocks/GalleryBlock").then((module) => ({ default: module.GalleryBlock }))
 );
+const TextSectionBlock = lazy(() =>
+  import("./blocks/TextSectionBlock").then((module) => ({ default: module.TextSectionBlock }))
+);
+const ParticipantsGridBlock = lazy(() =>
+  import("./blocks/ParticipantsGridBlock").then((module) => ({ default: module.ParticipantsGridBlock }))
+);
 
 function HeroBlock({ data, fallbackTitle, fallbackSubtitle, slug, blockType }) {
   return (
@@ -119,6 +125,22 @@ function BlockManager({ blocks, defaults, slug }) {
           return (
             <Suspense key={key} fallback={<BlockFallback />}>
               <GalleryBlock data={block.data} />
+            </Suspense>
+          );
+        }
+
+        if (block.block_type === "text_section") {
+          return (
+            <Suspense key={key} fallback={<BlockFallback />}>
+              <TextSectionBlock data={block.data} />
+            </Suspense>
+          );
+        }
+
+        if (block.block_type === "participants_grid") {
+          return (
+            <Suspense key={key} fallback={<BlockFallback />}>
+              <ParticipantsGridBlock data={block.data} />
             </Suspense>
           );
         }
