@@ -359,7 +359,7 @@ export function AdminPage() {
     const currentPage = pageSlug || currentBlock?.page_slug || selectedSlug || "necunoscut";
 
     if (supabase) {
-      const filePath = `${currentPage}/${Date.now()}-${file.name}`;
+      const filePath = `steco-images/${currentPage}/${Date.now()}-${file.name}`;
 
       const { error: uploadErr } = await supabase
         .storage
