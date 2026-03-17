@@ -71,6 +71,9 @@ function BlockManager({ blocks, defaults, slug }) {
     return <DefaultContent defaults={defaults} slug={slug} />;
   }
 
+  // eslint-disable-next-line no-console
+  console.log(`[Steco] BlockManager primește blocuri pentru slug "${slug}":`, blocks);
+
   return (
     <>
       {blocks.map((block) => {
@@ -98,6 +101,13 @@ function BlockManager({ blocks, defaults, slug }) {
         }
 
         if (block.block_type === "services_grid") {
+          // eslint-disable-next-line no-console
+          console.log("[Steco] Date primite pentru bloc services_grid:", block);
+
+          if (!block.data || !block.data.items) {
+            return null;
+          }
+
           return (
             <Suspense key={key} fallback={<BlockFallback />}>
               <ServicesGridBlock data={block.data} />
@@ -156,6 +166,10 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
           order_index: row.order_index ?? 0,
           data: row.content_json || row.block_data || {}
         }));
+
+        // eslint-disable-next-line no-console
+        console.log(`[Steco] Blocuri încărcate pentru slug "${slug}":`, mapped);
+
         setBlocks(mapped);
       } catch (err) {
         console.error("[Steco] Eroare neașteptată la încărcarea blocurilor:", err);
@@ -184,11 +198,25 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
         </div>
       )}
 
-      <BlockManager
-        blocks={blocks}
-        defaults={{ title: defaultTitle, subtitle: defaultSubtitle }}
-        slug={slug}
-      />
+      {!loading && (!blocks || !blocks.length) ? (
+        <section className="mx-auto max-w-3xl px-4 pt-24 pb-16 sm:px-6 lg:px-8">
+          <div className="glass-panel rounded-3xl p-6 text-center">
+            <p className="text-lg font-semibold text-red-300">
+              Eroare: Nu s-au găsit date pentru slug-ul "{slug}" în Supabase.
+            </p>
+            <p className="mt-2 text-sm text-slate-400">
+              Verifică în tabela <code className="font-mono">steco_page_blocks</code> că există rânduri cu{" "}
+              <code className="font-mono">page_slug = "{slug}"</code>.
+            </p>
+          </div>
+        </section>
+      ) : (
+        <BlockManager
+          blocks={blocks}
+          defaults={{ title: defaultTitle, subtitle: defaultSubtitle }}
+          slug={slug}
+        />
+      )}
     </main>
   );
 }
