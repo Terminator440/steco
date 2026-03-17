@@ -345,6 +345,15 @@ export function AdminPage() {
   }
 
   async function handleImageUpload(event, pageSlug, blockIndex, fieldPath) {
+    const currentBlock = blocks[blockIndex];
+    const blockType = currentBlock?.block_type || "necunoscut";
+
+    if (blockType === "services_grid") {
+      // eslint-disable-next-line no-console
+      console.log("UPLOAD BLOCAT PENTRU SERVICES_GRID");
+      return;
+    }
+
     // eslint-disable-next-line no-console
     console.log("UPLOAD DECLANȘAT MANUAL");
 
@@ -357,8 +366,6 @@ export function AdminPage() {
 
     let imageValue = "";
 
-    const currentBlock = blocks[blockIndex];
-    const blockType = currentBlock?.block_type || "necunoscut";
     const currentPage = pageSlug || currentBlock?.page_slug || selectedSlug || "necunoscut";
 
     if (supabase) {
