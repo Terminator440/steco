@@ -20,6 +20,7 @@ function HeroBlock({ data, fallbackTitle, fallbackSubtitle }) {
       imageUrl={data?.backgroundImageUrl}
       ctaLabel={data?.buttonLabel}
       ctaHref={data?.buttonHref}
+      blockType="hero"
     />
   );
 }

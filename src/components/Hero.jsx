@@ -1,14 +1,14 @@
 import { Link } from "react-router-dom";
 import { buildSupabaseSrcSet, withSupabaseImageParams } from "../lib/imageUtils";
 
-export function Hero({ title, subtitle, imageUrl, ctaLabel, ctaHref }) {
+export function Hero({ title, subtitle, imageUrl, ctaLabel, ctaHref, blockType = "hero" }) {
   const heroSource = withSupabaseImageParams(imageUrl, { width: 960, quality: 78 });
   const heroSrcSet = buildSupabaseSrcSet(imageUrl, [640, 960, 1280], 78);
 
   // Debug: verificăm că URL-ul imaginii ajunge corect din content_json
   if (imageUrl) {
     // eslint-disable-next-line no-console
-    console.log("Imagine incarcata (Hero):", imageUrl);
+    console.log(`Imagine incarcata (${blockType}):`, imageUrl);
   }
 
   return (
