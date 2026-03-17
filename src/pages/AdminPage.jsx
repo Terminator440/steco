@@ -354,8 +354,12 @@ export function AdminPage() {
 
     let imageValue = "";
 
+    const currentBlock = blocks[blockIndex];
+    const blockType = currentBlock?.block_type || "necunoscut";
+    const currentPage = pageSlug || currentBlock?.page_slug || selectedSlug || "necunoscut";
+
     if (supabase) {
-      const filePath = `${pageSlug}/${Date.now()}-${file.name}`;
+      const filePath = `${currentPage}/${Date.now()}-${file.name}`;
 
       const { error: uploadErr } = await supabase
         .storage
@@ -390,9 +394,6 @@ export function AdminPage() {
       }
     }
 
-    const currentBlock = blocks[blockIndex];
-    const blockType = currentBlock?.block_type || "necunoscut";
-    const currentPage = pageSlug || currentBlock?.page_slug || "necunoscut";
     // eslint-disable-next-line no-console
     console.log("Imagine salvată în pagina: " + currentPage + " pentru blocul: " + blockType, imageValue);
 
