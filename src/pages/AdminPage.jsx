@@ -390,6 +390,12 @@ export function AdminPage() {
       }
     }
 
+    const currentBlock = blocks[blockIndex];
+    const blockType = currentBlock?.block_type || "necunoscut";
+    const currentPage = pageSlug || currentBlock?.page_slug || "necunoscut";
+    // eslint-disable-next-line no-console
+    console.log("Imagine salvată în pagina: " + currentPage + " pentru blocul: " + blockType, imageValue);
+
     setBlocks((prev) =>
       prev.map((block, idx) => {
         if (idx !== blockIndex) return block;
@@ -807,7 +813,7 @@ export function AdminPage() {
                                     />
                                   </div>
                                   <div>
-                                    <label className="mb-1 block text-[11px] text-slate-600">Iconiță</label>
+                                    <label className="mb-1 block text-[11px] text-slate-600">Schimbă imagine</label>
                                     <input
                                       type="file"
                                       accept="image/*"
