@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { buildSupabaseSrcSet, withSupabaseImageParams } from "../lib/imageUtils";
 
-export function Hero({ title, subtitle, imageUrl, ctaLabel, ctaHref, blockType = "hero" }) {
+export function Hero({ title, subtitle, imageUrl, ctaLabel, ctaHref, blockType = "necunoscut" }) {
   const heroSource = withSupabaseImageParams(imageUrl, { width: 960, quality: 78 });
   const heroSrcSet = buildSupabaseSrcSet(imageUrl, [640, 960, 1280], 78);
 

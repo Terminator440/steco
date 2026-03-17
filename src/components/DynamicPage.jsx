@@ -12,7 +12,7 @@ const GalleryBlock = lazy(() =>
   import("./blocks/GalleryBlock").then((module) => ({ default: module.GalleryBlock }))
 );
 
-function HeroBlock({ data, fallbackTitle, fallbackSubtitle }) {
+function HeroBlock({ data, fallbackTitle, fallbackSubtitle, slug, blockType }) {
   return (
     <Hero
       title={data?.title || fallbackTitle}
@@ -20,7 +20,7 @@ function HeroBlock({ data, fallbackTitle, fallbackSubtitle }) {
       imageUrl={data?.backgroundImageUrl}
       ctaLabel={data?.buttonLabel}
       ctaHref={data?.buttonHref}
-      blockType="hero"
+      blockType={blockType || slug || "hero"}
     />
   );
 }
@@ -36,7 +36,13 @@ function BlockFallback() {
 function DefaultContent({ defaults, slug }) {
   return (
     <>
-      <HeroBlock data={null} fallbackTitle={defaults.title} fallbackSubtitle={defaults.subtitle} />
+      <HeroBlock
+        data={null}
+        fallbackTitle={defaults.title}
+        fallbackSubtitle={defaults.subtitle}
+        slug={slug}
+        blockType={slug}
+      />
       <section className="mx-auto max-w-3xl px-4 pb-16 sm:px-6 lg:px-8">
         <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-4 text-center">
           <p className="text-sm text-slate-300 sm:text-base">
@@ -77,6 +83,8 @@ function BlockManager({ blocks, defaults, slug }) {
               data={block.data}
               fallbackTitle={defaults.title}
               fallbackSubtitle={defaults.subtitle}
+              slug={slug}
+              blockType={block.block_type}
             />
           );
         }
