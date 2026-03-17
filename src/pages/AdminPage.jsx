@@ -745,89 +745,89 @@ export function AdminPage() {
                       )}
 
                       {block.block_type === "services_grid" && (
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                           <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-600">Titlu grilă</label>
+                            <label className="mb-1 block text-xs font-medium text-slate-600">Titlu Secțiune Grilă</label>
                             <input
                               type="text"
                               value={data.heading || ""}
                               onChange={(e) => updateBlock(index, { data: { ...data, heading: e.target.value } })}
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-rose-300 focus:ring-2"
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-300"
+                              placeholder="Ex: Serviciile Noastre"
                             />
                           </div>
 
                           <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                                Servicii
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                Lista Servicii (Doar Text)
                               </p>
                               <button
                                 type="button"
                                 onClick={() => {
                                   const items = [...(data.items || [])];
-                                  items.push({
-                                    id: getUID(),
-                                    title: "",
-                                    description: "",
-                                    iconUrl: ""
-                                  });
+                                  items.push({ id: getUID(), title: "", description: "" });
                                   updateBlock(index, { data: { ...data, items } });
                                 }}
-                                className="rounded-full border border-slate-300 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-700 hover:bg-slate-100"
+                                className="rounded-full bg-slate-900 px-3 py-1 text-[10px] font-bold uppercase text-white hover:bg-slate-800"
                               >
-                                Adaugă element
+                                + Adaugă Serviciu
                               </button>
                             </div>
 
                             {(data.items || []).map((item, itemIndex) => (
-                              <div key={item.id || itemIndex} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                                <div className="mb-2 flex items-center justify-between">
-                                  <p className="text-xs font-semibold text-slate-600">Element #{itemIndex + 1}</p>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const items = [...(data.items || [])];
-                                      items.splice(itemIndex, 1);
-                                      updateBlock(index, { data: { ...data, items } });
-                                    }}
-                                    className="text-xs text-red-600 hover:text-red-700"
-                                  >
-                                    Șterge
-                                  </button>
-                                </div>
+                              <div
+                                key={item.id || itemIndex}
+                                className="relative rounded-xl border border-slate-200 bg-slate-50 p-4"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const items = (data.items || []).filter((_, i) => i !== itemIndex);
+                                    updateBlock(index, { data: { ...data, items } });
+                                  }}
+                                  className="absolute right-2 top-2 text-slate-400 hover:text-red-500"
+                                >
+                                  <TrashIcon />
+                                </button>
 
-                                <div>
-                                  <label className="mb-1 block text-[11px] text-slate-600">Titlu</label>
-                                  <input
-                                    type="text"
-                                    value={item.title || ""}
-                                    onChange={(e) => {
-                                      const items = [...(data.items || [])];
-                                      items[itemIndex] = {
-                                        ...(items[itemIndex] || {}),
-                                        title: e.target.value
-                                      };
-                                      updateBlock(index, { data: { ...data, items } });
-                                    }}
-                                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs outline-none ring-rose-300 focus:ring-2"
-                                  />
-                                </div>
-
-                                <div className="mt-2">
-                                  <label className="mb-1 block text-[11px] text-slate-600">Descriere</label>
-                                  <textarea
-                                    rows={3}
-                                    value={item.description || ""}
-                                    onChange={(e) => {
-                                      const items = [...(data.items || [])];
-                                      items[itemIndex] = {
-                                        ...(items[itemIndex] || {}),
-                                        description: e.target.value
-                                      };
-                                      updateBlock(index, { data: { ...data, items } });
-                                    }}
-                                    className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs outline-none ring-rose-300 focus:ring-2"
-                                  />
+                                <div className="grid gap-3">
+                                  <div>
+                                    <label className="block text-[10px] font-bold uppercase text-slate-500">
+                                      Nume Serviciu
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={item.title || ""}
+                                      onChange={(e) => {
+                                        const items = [...(data.items || [])];
+                                        items[itemIndex] = {
+                                          ...(items[itemIndex] || {}),
+                                          title: e.target.value
+                                        };
+                                        updateBlock(index, { data: { ...data, items } });
+                                      }}
+                                      className="w-full border-b border-slate-300 bg-transparent py-1 text-sm font-semibold outline-none focus:border-rose-500"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] font-bold uppercase text-slate-500">
+                                      Descriere
+                                    </label>
+                                    <textarea
+                                      rows={2}
+                                      value={item.description || ""}
+                                      onChange={(e) => {
+                                        const items = [...(data.items || [])];
+                                        items[itemIndex] = {
+                                          ...(items[itemIndex] || {}),
+                                          description: e.target.value
+                                        };
+                                        updateBlock(index, { data: { ...data, items } });
+                                      }}
+                                      className="w-full border-b border-slate-300 bg-transparent py-1 text-sm outline-none focus:border-rose-500"
+                                    />
+                                  </div>
                                 </div>
                               </div>
                             ))}
