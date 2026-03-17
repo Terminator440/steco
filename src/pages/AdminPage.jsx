@@ -301,7 +301,7 @@ export function AdminPage() {
       const { error: upsertError } = await supabase
         .from("steco_page_blocks")
         .upsert(payload, {
-          onConflict: "page_slug,block_type"
+          onConflict: "page_slug, block_type"
         });
 
       if (upsertError) {
