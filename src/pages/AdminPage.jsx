@@ -796,51 +796,21 @@ export function AdminPage() {
                                   </button>
                                 </div>
 
-                                <div className="grid gap-2 sm:grid-cols-2">
-                                  <div>
-                                    <label className="mb-1 block text-[11px] text-slate-600">Titlu</label>
-                                    <input
-                                      type="text"
-                                      value={item.title || ""}
-                                      onChange={(e) => {
-                                        const items = [...(data.items || [])];
-                                        items[itemIndex] = {
-                                          ...(items[itemIndex] || {}),
-                                          title: e.target.value
-                                        };
-                                        updateBlock(index, { data: { ...data, items } });
-                                      }}
-                                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs outline-none ring-rose-300 focus:ring-2"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="mb-1 block text-[11px] text-slate-600">Schimbă imagine</label>
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      onChange={(e) =>
-                                        handleImageUpload(e, selectedSlug, index, `services_grid.icon.${itemIndex}`)
-                                      }
-                                      className="block w-full text-xs text-slate-700 file:mr-2 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-2 file:py-1 file:text-slate-700"
-                                    />
-                                    {item.iconUrl && (
-                                      <div className="relative mt-1 aspect-square w-10 overflow-hidden rounded-full border border-slate-200 bg-slate-200/80">
-                                        <div
-                                          aria-hidden="true"
-                                          className="absolute inset-0 scale-110 bg-gradient-to-br from-slate-100 to-slate-300 blur-lg"
-                                        />
-                                        <img
-                                          src={withSupabaseImageParams(item.iconUrl, { width: 96, quality: 80 })}
-                                          alt={item.title || "Icon"}
-                                          width="96"
-                                          height="96"
-                                          loading="lazy"
-                                          decoding="async"
-                                          className="relative z-10 h-full w-full object-cover"
-                                        />
-                                      </div>
-                                    )}
-                                  </div>
+                                <div>
+                                  <label className="mb-1 block text-[11px] text-slate-600">Titlu</label>
+                                  <input
+                                    type="text"
+                                    value={item.title || ""}
+                                    onChange={(e) => {
+                                      const items = [...(data.items || [])];
+                                      items[itemIndex] = {
+                                        ...(items[itemIndex] || {}),
+                                        title: e.target.value
+                                      };
+                                      updateBlock(index, { data: { ...data, items } });
+                                    }}
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs outline-none ring-rose-300 focus:ring-2"
+                                  />
                                 </div>
 
                                 <div className="mt-2">
