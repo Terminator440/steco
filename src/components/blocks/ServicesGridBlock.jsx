@@ -1,6 +1,16 @@
 export function ServicesGridBlock({ data }) {
   const items = data?.items || [];
 
+  if (!data || !Array.isArray(items)) {
+    return (
+      <section className="mx-auto max-w-6xl px-4 pb-16 pt-24 sm:px-6 lg:px-8">
+        <div className="glass-panel rounded-2xl p-4 text-center text-sm text-slate-300">
+          Încarcare servicii...
+        </div>
+      </section>
+    );
+  }
+
   if (!items.length) return null;
 
   return (
