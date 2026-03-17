@@ -344,80 +344,78 @@ export function AdminPage() {
     });
   }
 
-  function handleImageUpload(pageSlug, blockIndex, fieldPath) {
-    return async (event) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
+  async function handleImageUpload(event, pageSlug, blockIndex, fieldPath) {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-      setUploadError("");
-      const key = `${blockIndex}-${fieldPath}`;
-      setUploadingImagePath(key);
+    setUploadError("");
+    const key = `${blockIndex}-${fieldPath}`;
+    setUploadingImagePath(key);
 
-      let imageValue = "";
+    let imageValue = "";
 
-      if (supabase) {
-        const filePath = `${pageSlug}/${Date.now()}-${file.name}`;
+    if (supabase) {
+      const filePath = `${pageSlug}/${Date.now()}-${file.name}`;
 
-        const { error: uploadErr } = await supabase
+      const { error: uploadErr } = await supabase
+        .storage
+        .from("steco-images")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false
+        });
+
+      if (!uploadErr) {
+        const { data: publicData } = supabase
           .storage
           .from("steco-images")
-          .upload(filePath, file, {
-            cacheControl: "3600",
-            upsert: false
-          });
+          .getPublicUrl(filePath);
 
-        if (!uploadErr) {
-          const { data: publicData } = supabase
-            .storage
-            .from("steco-images")
-            .getPublicUrl(filePath);
-
-          imageValue = publicData?.publicUrl || "";
-        } else {
-          // eslint-disable-next-line no-console
-          console.error("Eroare upload Supabase, fallback pe base64:", uploadErr);
-        }
+        imageValue = publicData?.publicUrl || "";
+      } else {
+        // eslint-disable-next-line no-console
+        console.error("Eroare upload Supabase, fallback pe base64:", uploadErr);
       }
+    }
 
-      if (!imageValue) {
-        try {
-          imageValue = await fileToBase64(file);
-        } catch (err) {
-          setUploadError("Eroare la prelucrarea imaginii.");
-          setUploadingImagePath("");
-          // eslint-disable-next-line no-console
-          console.error("Eroare Base64:", err);
-          return;
-        }
+    if (!imageValue) {
+      try {
+        imageValue = await fileToBase64(file);
+      } catch (err) {
+        setUploadError("Eroare la prelucrarea imaginii.");
+        setUploadingImagePath("");
+        // eslint-disable-next-line no-console
+        console.error("Eroare Base64:", err);
+        return;
       }
+    }
 
-      setBlocks((prev) =>
-        prev.map((block, idx) => {
-          if (idx !== blockIndex) return block;
-          const newData = { ...block.data };
+    setBlocks((prev) =>
+      prev.map((block, idx) => {
+        if (idx !== blockIndex) return block;
+        const newData = { ...block.data };
 
-          if (fieldPath === "hero.background") {
-            newData.backgroundImageUrl = imageValue;
-          } else if (fieldPath === "text_photo.image") {
-            newData.imageUrl = imageValue;
-          } else if (fieldPath.startsWith("services_grid.icon.")) {
-            const itemIndex = Number(fieldPath.split(".")[2]);
-            const items = [...(newData.items || [])];
-            items[itemIndex] = { ...(items[itemIndex] || {}), iconUrl: imageValue };
-            newData.items = items;
-          } else if (fieldPath.startsWith("gallery.image.")) {
-            const imageIndex = Number(fieldPath.split(".")[2]);
-            const images = [...(newData.images || [])];
-            images[imageIndex] = { ...(images[imageIndex] || {}), url: imageValue };
-            newData.images = images;
-          }
+        if (fieldPath === "hero.background") {
+          newData.backgroundImageUrl = imageValue;
+        } else if (fieldPath === "text_photo.image") {
+          newData.imageUrl = imageValue;
+        } else if (fieldPath.startsWith("services_grid.icon.")) {
+          const itemIndex = Number(fieldPath.split(".")[2]);
+          const items = [...(newData.items || [])];
+          items[itemIndex] = { ...(items[itemIndex] || {}), iconUrl: imageValue };
+          newData.items = items;
+        } else if (fieldPath.startsWith("gallery.image.")) {
+          const imageIndex = Number(fieldPath.split(".")[2]);
+          const images = [...(newData.images || [])];
+          images[imageIndex] = { ...(images[imageIndex] || {}), url: imageValue };
+          newData.images = images;
+        }
 
-          return { ...block, data: newData };
-        })
-      );
+        return { ...block, data: newData };
+      })
+    );
 
-      setUploadingImagePath("");
-    };
+    setUploadingImagePath("");
   }
 
   if (!isAuthed) {
@@ -616,7 +614,7 @@ export function AdminPage() {
                             <input
                               type="file"
                               accept="image/*"
-                              onChange={handleImageUpload(selectedSlug, index, "hero.background")}
+                              onChange={(e) => handleImageUpload(e, selectedSlug, index, "hero.background")}
                               className="block w-full text-xs text-slate-700 file:mr-3 file:rounded-md file:border file:border-slate-300 file:bg-slate-100 file:px-3 file:py-1.5 file:font-semibold file:text-slate-800 hover:file:bg-slate-200"
                             />
                             {uploadingImagePath === `${index}-hero.background` && (
@@ -712,7 +710,7 @@ export function AdminPage() {
                             <input
                               type="file"
                               accept="image/*"
-                              onChange={handleImageUpload(selectedSlug, index, "text_photo.image")}
+                              onChange={(e) => handleImageUpload(e, selectedSlug, index, "text_photo.image")}
                               className="block w-full text-xs text-slate-700 file:mr-3 file:rounded-md file:border file:border-slate-300 file:bg-slate-100 file:px-3 file:py-1.5 file:font-semibold file:text-slate-800 hover:file:bg-slate-200"
                             />
                             {uploadingImagePath === `${index}-text_photo.image` && (
@@ -813,7 +811,9 @@ export function AdminPage() {
                                     <input
                                       type="file"
                                       accept="image/*"
-                                      onChange={handleImageUpload(selectedSlug, index, `services_grid.icon.${itemIndex}`)}
+                                      onChange={(e) =>
+                                        handleImageUpload(e, selectedSlug, index, `services_grid.icon.${itemIndex}`)
+                                      }
                                       className="block w-full text-xs text-slate-700 file:mr-2 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-2 file:py-1 file:text-slate-700"
                                     />
                                     {item.iconUrl && (
@@ -907,7 +907,9 @@ export function AdminPage() {
                                 <input
                                   type="file"
                                   accept="image/*"
-                                  onChange={handleImageUpload(selectedSlug, index, `gallery.image.${imgIndex}`)}
+                                  onChange={(e) =>
+                                    handleImageUpload(e, selectedSlug, index, `gallery.image.${imgIndex}`)
+                                  }
                                   className="block w-full text-xs text-slate-700 file:mr-2 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-2 file:py-1 file:text-slate-700"
                                 />
                                 {img.url && (
