@@ -345,11 +345,11 @@ export function AdminPage() {
   }
 
   async function handleImageUpload(event, pageSlug, blockIndex, fieldPath) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
     // eslint-disable-next-line no-console
     console.log("UPLOAD DECLANȘAT MANUAL");
+
+    const file = event.target.files?.[0];
+    if (!file) return;
 
     setUploadError("");
     const key = `${blockIndex}-${fieldPath}`;
