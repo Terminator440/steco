@@ -15,8 +15,6 @@ const BLOCK_TYPES = [
   { value: "services_grid", label: "Grilă Servicii" },
   { value: "gallery", label: "Galerie" }
 ];
-const STECO_LOGO_SRC = "/steco-logo.png";
-
 function getUID() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
@@ -158,7 +156,6 @@ export function AdminPage() {
 
   const [uploadingImagePath, setUploadingImagePath] = useState("");
   const [uploadError, setUploadError] = useState("");
-  const [logoError, setLogoError] = useState(false);
 
   async function fetchBlocksForSlug(slug) {
     if (!supabase) {
@@ -316,10 +313,13 @@ export function AdminPage() {
       const { error: upsertError } = await supabase
         .from("steco_page_blocks")
         .upsert(payload, {
-          onConflict: "page_slug,order_index"
+          onConflict: "page_slug,block_type"
         });
 
       if (upsertError) {
+        // Ajută la debug: vedem exact ce câmp lipsește sau este invalid
+        // eslint-disable-next-line no-console
+        console.error("DETALII EROARE SUPABASE:", upsertError);
         setPageMessage("A apărut o eroare la salvarea blocurilor.");
         setPageMessageType("error");
         setSavingPage(false);
@@ -424,22 +424,9 @@ export function AdminPage() {
       <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
         <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-2xl sm:p-8">
           <div className="mb-6 flex flex-col items-center gap-3">
-            {!logoError ? (
-              <img
-                src={STECO_LOGO_SRC}
-                alt="Steco Events"
-                width="320"
-                height="128"
-                loading="eager"
-                decoding="async"
-                className="h-12 w-auto"
-                onError={() => setLogoError(true)}
-              />
-            ) : (
-              <span className="text-lg font-semibold tracking-[0.16em] uppercase text-slate-50">
-                Steco Events
-              </span>
-            )}
+            <span className="text-xl font-serif font-bold tracking-[0.2em] uppercase text-slate-50">
+              STECO <span className="text-[#D4AF37]">EVENTS</span>
+            </span>
             <h1 className="text-center font-display text-2xl text-slate-50">Admin Steco</h1>
           </div>
 
@@ -480,22 +467,9 @@ export function AdminPage() {
     <main className="min-h-screen bg-slate-950 px-4 pb-16 pt-24 sm:px-6 lg:px-8">
       <div className="mx-auto mb-6 flex max-w-6xl items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3">
         <div className="flex items-center gap-3">
-          {!logoError ? (
-            <img
-              src={STECO_LOGO_SRC}
-              alt="Steco Events"
-              width="320"
-              height="128"
-              loading="eager"
-              decoding="async"
-              className="h-12 w-auto"
-              onError={() => setLogoError(true)}
-            />
-          ) : (
-            <span className="text-lg font-semibold tracking-[0.16em] uppercase text-slate-50">
-              Steco Events
-            </span>
-          )}
+          <span className="text-xl font-serif font-bold tracking-[0.2em] uppercase text-slate-50">
+            STECO <span className="text-[#D4AF37]">EVENTS</span>
+          </span>
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-rose-400">Steco Block Editor</p>
             <p className="text-sm text-slate-200">Construiește pagina din blocuri</p>

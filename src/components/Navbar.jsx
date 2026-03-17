@@ -15,8 +15,8 @@ export function Navbar() {
     <header className="fixed inset-x-0 top-0 z-40 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <Link to="/" className="flex items-center gap-3">
-          <span className="text-lg font-display font-bold tracking-[0.18em] uppercase">
-            STECO EVENTS
+          <span className="text-xl font-serif font-bold tracking-[0.2em] uppercase">
+            STECO <span className="text-[#D4AF37]">EVENTS</span>
           </span>
         </Link>
 
