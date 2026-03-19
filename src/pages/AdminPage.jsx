@@ -329,15 +329,21 @@ export function AdminPage() {
     const block = blocks[index];
     if (!block) return;
 
-    // Confirmare înainte de ștergere din DB.
-    const ok = window.confirm("Ești sigur că vrei să ștergi acest bloc definitiv?");
-    if (!ok) return;
-
     // Dacă blocul nu are `id` (e creat local dar încă nesalvat), ștergem doar din UI.
     if (!supabase || block.id == null) {
       deleteBlock(index);
       return;
     }
+
+    // UI rapid: scoatem imediat din listă, apoi ștergem din Supabase.
+    setBlocks((prev) =>
+      prev
+        .filter((b) => b.id !== block.id)
+        .map((b, i) => ({
+          ...b,
+          order_index: i
+        }))
+    );
 
     setSavingPage(true);
     setPageMessage("");
@@ -352,11 +358,11 @@ export function AdminPage() {
         window.alert("Ștergerea a eșuat: " + (error.message || "necunoscută"));
         setPageMessage("A apărut o eroare la ștergere.");
         setPageMessageType("error");
+        const refreshed = await fetchBlocksForSlug(selectedSlug);
+        setBlocks(refreshed.blocks);
         return;
       }
 
-      const refreshed = await fetchBlocksForSlug(selectedSlug);
-      setBlocks(refreshed.blocks);
       setPageMessage("Blocul a fost șters definitiv.");
       setPageMessageType("success");
     } catch (err) {
@@ -365,6 +371,8 @@ export function AdminPage() {
       window.alert("Ștergerea a eșuat: " + (err?.message || "necunoscută"));
       setPageMessage("A apărut o eroare la ștergere.");
       setPageMessageType("error");
+      const refreshed = await fetchBlocksForSlug(selectedSlug);
+      setBlocks(refreshed.blocks);
     } finally {
       setSavingPage(false);
     }
