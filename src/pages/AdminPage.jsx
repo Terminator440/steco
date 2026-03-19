@@ -325,57 +325,71 @@ export function AdminPage() {
     );
   }
 
+  async function upsertBlocksToSupabase(blocksToSave) {
+    if (!supabase) {
+      window.alert("Supabase nu este configurat.");
+      throw new Error("Supabase nu este configurat.");
+    }
+
+    const safeBlocks = Array.isArray(blocksToSave) ? blocksToSave : [];
+
+    const allHaveId = safeBlocks.every((block) => block && block.id != null);
+
+    const payload = safeBlocks.map((block, index) => ({
+      ...(allHaveId ? { id: block.id } : {}),
+      page_slug: block.page_slug || selectedSlug,
+      block_type: block.block_type,
+      content_json: block.data || {},
+      order_index: block.order_index ?? index
+    }));
+
+    // Cerință: logăm înainte de apelul către Supabase.
+    console.log("Date trimise spre salvare:", safeBlocks);
+    // eslint-disable-next-line no-console
+    console.log("Payload UPSERT (incl. ID când există):", payload);
+
+    const upsertOptions = allHaveId
+      ? { onConflict: "id" }
+      : { onConflict: "page_slug, block_type, order_index" };
+
+    let didAlert = false;
+    try {
+      const { error: upsertError } = await supabase
+        .from("steco_page_blocks")
+        .upsert(payload, upsertOptions);
+
+      if (upsertError) {
+        didAlert = true;
+        window.alert("Salvarea a eșuat: " + (upsertError.message || "necunoscută"));
+        // eslint-disable-next-line no-console
+        console.error("DETALII EROARE SUPABASE (upsert):", upsertError);
+        throw upsertError;
+      }
+
+      const refreshed = await fetchBlocksForSlug(selectedSlug);
+      setBlocks(refreshed.blocks);
+      return refreshed.blocks;
+    } catch (err) {
+      if (!didAlert) {
+        window.alert("Salvarea a eșuat: " + (err?.message || "necunoscută"));
+      }
+      // eslint-disable-next-line no-console
+      console.error("DETALII EROARE SUPABASE (catch):", err);
+      throw err;
+    }
+  }
+
   async function handlePublish(e) {
     e.preventDefault();
     setSavingPage(true);
     setPageMessage("");
     setPageMessageType("info");
 
-    if (!supabase) {
-      setPageMessage("Supabase nu este configurat.");
-      setPageMessageType("error");
-      setSavingPage(false);
-      return;
-    }
-
-    const payload = blocks.map((block, index) => ({
-      page_slug: selectedSlug,
-      block_type: block.block_type,
-      content_json: block.data || {},
-      order_index: index
-    }));
-
     try {
-      const { error: upsertError } = await supabase
-        .from("steco_page_blocks")
-        .upsert(payload, {
-          onConflict: "page_slug, block_type, order_index"
-        });
-
-      if (upsertError) {
-        // eslint-disable-next-line no-alert
-        alert(
-          "EROARE SQL: " +
-            (upsertError.message || "") +
-            " - " +
-            (upsertError.details || "")
-        );
-        // eslint-disable-next-line no-console
-        console.error("DETALII EROARE SUPABASE:", upsertError);
-        setPageMessage("A apărut o eroare la salvarea blocurilor.");
-        setPageMessageType("error");
-        return;
-      }
-
-      const refreshed = await fetchBlocksForSlug(selectedSlug);
-      setBlocks(refreshed.blocks);
+      await upsertBlocksToSupabase(blocks);
       setPageMessage("Pagina a fost publicată cu succes. Conținutul a fost reîmprospătat.");
       setPageMessageType("success");
     } catch (err) {
-      // eslint-disable-next-line no-alert
-      alert("EROARE SQL: " + (err?.message || "necunoscută"));
-      // eslint-disable-next-line no-console
-      console.error("DETALII EROARE SUPABASE (catch):", err);
       setPageMessage("A apărut o eroare la salvarea blocurilor.");
       setPageMessageType("error");
     } finally {
@@ -1068,10 +1082,33 @@ export function AdminPage() {
                                   <p className="text-xs font-semibold text-slate-600">Imagine #{imgIndex + 1}</p>
                                   <button
                                     type="button"
-                                    onClick={() => {
+                                    onClick={async () => {
                                       const images = [...(data.images || [])];
                                       images.splice(imgIndex, 1);
-                                      updateBlock(index, { data: { ...data, images } });
+
+                                      const updatedBlocks = blocks.map((block, blockIndex) => {
+                                        if (blockIndex !== index) return block;
+                                        return { ...block, data: { ...block.data, images } };
+                                      });
+
+                                      // Cerință: actualizează întâi starea locală.
+                                      setBlocks(updatedBlocks);
+
+                                      setSavingPage(true);
+                                      setPageMessage("");
+                                      setPageMessageType("info");
+
+                                      try {
+                                        const updatedBlocksForSave = [updatedBlocks[index]];
+                                        await upsertBlocksToSupabase(updatedBlocksForSave);
+                                        setPageMessage("Pagina a fost actualizată după ștergere.");
+                                        setPageMessageType("success");
+                                      } catch (err) {
+                                        setPageMessage("A apărut o eroare la ștergerea imaginii.");
+                                        setPageMessageType("error");
+                                      } finally {
+                                        setSavingPage(false);
+                                      }
                                     }}
                                     className="text-xs text-red-600 hover:text-red-700"
                                   >
