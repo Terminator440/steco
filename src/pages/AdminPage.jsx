@@ -325,6 +325,51 @@ export function AdminPage() {
     );
   }
 
+  async function handleDeleteBlock(index) {
+    const block = blocks[index];
+    if (!block) return;
+
+    // Confirmare înainte de ștergere din DB.
+    const ok = window.confirm("Ești sigur că vrei să ștergi acest bloc definitiv?");
+    if (!ok) return;
+
+    // Dacă blocul nu are `id` (e creat local dar încă nesalvat), ștergem doar din UI.
+    if (!supabase || block.id == null) {
+      deleteBlock(index);
+      return;
+    }
+
+    setSavingPage(true);
+    setPageMessage("");
+    setPageMessageType("info");
+
+    try {
+      const { error } = await supabase.from("steco_page_blocks").delete().eq("id", block.id);
+
+      if (error) {
+        // eslint-disable-next-line no-console
+        console.error("DETALII EROARE SUPABASE (delete):", error);
+        window.alert("Ștergerea a eșuat: " + (error.message || "necunoscută"));
+        setPageMessage("A apărut o eroare la ștergere.");
+        setPageMessageType("error");
+        return;
+      }
+
+      const refreshed = await fetchBlocksForSlug(selectedSlug);
+      setBlocks(refreshed.blocks);
+      setPageMessage("Blocul a fost șters definitiv.");
+      setPageMessageType("success");
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("DETALII EROARE SUPABASE (delete catch):", err);
+      window.alert("Ștergerea a eșuat: " + (err?.message || "necunoscută"));
+      setPageMessage("A apărut o eroare la ștergere.");
+      setPageMessageType("error");
+    } finally {
+      setSavingPage(false);
+    }
+  }
+
   async function upsertBlocksToSupabase(blocksToSave) {
     if (!supabase) {
       window.alert("Supabase nu este configurat.");
@@ -666,7 +711,7 @@ export function AdminPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => deleteBlock(index)}
+                            onClick={() => handleDeleteBlock(index)}
                             className="inline-flex items-center justify-center rounded-md border border-red-200 px-2 py-1 text-red-600 hover:bg-red-50"
                             aria-label={`Șterge blocul ${index + 1}`}
                           >
