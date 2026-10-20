@@ -41,7 +41,7 @@ export default function App() {
             <DynamicPage
               slug="servicii"
               defaultTitle="Servicii complete pentru orice tip de eveniment."
-              defaultSubtitle="Nunți, botezuri, corporate și majorate – fiecare cu identitatea și scenografia proprie."
+              defaultSubtitle="Nunți, botezuri, majorate, aniversări și gender reveal, fiecare cu decorul și atmosfera lui."
               sectionTitle="Servicii Steco"
             />
           }
