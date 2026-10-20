@@ -102,7 +102,7 @@ export function DropZone({ multiple = false, onFiles, busy, children, className 
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/avif,image/gif"
+        accept="image/*"
         multiple={multiple}
         className="hidden"
         onChange={(event) => {

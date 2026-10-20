@@ -7,6 +7,9 @@ const EVENT_LABELS = {
   nunta: "Nuntă",
   botez: "Botez",
   majorat: "Majorat",
+  aniversare: "Aniversare",
+  gender_reveal: "Gender reveal",
+  candy_bar: "Candy bar",
   corporate: "Corporate",
   altul: "Alt eveniment"
 };
@@ -72,6 +75,17 @@ export function ContactRequestsPanel({ onChange }) {
       setError(`Statusul nu s-a salvat: ${updateError.message}`);
       return;
     }
+    onChange?.();
+  }
+
+  async function remove(req) {
+    if (!window.confirm(`Ștergi definitiv cererea de la ${req.name}? Nu o mai poți recupera.`)) return;
+    const { error: deleteError } = await supabase.from("steco_contact_requests").delete().eq("id", req.id);
+    if (deleteError) {
+      setError(`Cererea nu s-a șters: ${deleteError.message}`);
+      return;
+    }
+    setRequests((prev) => prev.filter((r) => r.id !== req.id));
     onChange?.();
   }
 
@@ -200,6 +214,15 @@ export function ContactRequestsPanel({ onChange }) {
               {req.message && (
                 <p className="mt-4 whitespace-pre-line rounded-xl bg-paper/70 px-4 py-3 text-[0.9375rem]">{req.message}</p>
               )}
+
+              <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-line pt-3">
+                <a href={`mailto:${req.email}`} className={buttonClass.quiet}>
+                  Răspunde pe email
+                </a>
+                <button type="button" onClick={() => remove(req)} className={buttonClass.danger}>
+                  Șterge cererea
+                </button>
+              </div>
             </li>
           ))}
         </ul>

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { clearBlocksCache } from "../../lib/content";
+import { compressImage } from "./compressImage";
 import { PAGES, SECTION_TYPES, SectionEditor, newId } from "./sections";
 import { Notice, buttonClass } from "./ui";
 
 const BUCKET = "steco-images";
 const MAX_BYTES = 10 * 1024 * 1024;
-const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif"];
 
 function snapshot(blocks) {
   return JSON.stringify(blocks.map((b) => [b.id, b.block_type, b.data]));
@@ -72,11 +72,10 @@ export function PageEditor() {
   }, [dirty]);
 
   const upload = useCallback(
-    async (file) => {
-      if (!ALLOWED.includes(file.type)) {
-        throw new Error("Formatul nu e acceptat. Folosește JPG, PNG sau WEBP (pozele HEIC de pe iPhone trebuie convertite).");
-      }
-      if (file.size > MAX_BYTES) throw new Error("Poza are peste 10 MB. Alege una mai mică.");
+    async (original) => {
+      if (original.type && !original.type.startsWith("image/")) throw new Error("Fișierul ales nu este o poză.");
+      const file = await compressImage(original);
+      if (file.size > MAX_BYTES) throw new Error("Poza are peste 10 MB chiar și după micșorare. Alege una mai mică.");
 
       const safeName = file.name
         .normalize("NFD")

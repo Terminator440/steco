@@ -4,6 +4,8 @@ import { Navbar } from "./components/Navbar";
 import { DynamicPage } from "./components/DynamicPage";
 import { Footer } from "./components/Footer";
 import { Invitation } from "./components/home/Invitation";
+import { NotFound } from "./components/NotFound";
+import { PrivacyPage } from "./components/PrivacyPage";
 
 const AdminPage = lazy(() =>
   import("./pages/AdminPage").then((module) => ({ default: module.AdminPage }))
@@ -109,6 +111,8 @@ export default function App() {
             </Suspense>
           }
         />
+        <Route path="/confidentialitate" element={<PrivacyPage />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
 
       {!isAdmin && pathname !== "/contact" && <Invitation />}

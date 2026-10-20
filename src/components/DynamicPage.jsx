@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { blocksFor, imagesFrom, spreadImages, useAllBlocks } from "../lib/content";
 import { ContactForm } from "./ContactForm";
@@ -68,7 +69,7 @@ function HomePage({ all, blocks, defaults }) {
         images={collage}
       />
       <Manifest text={mission?.data?.text} imageUrl={mission?.data?.imageUrl} imageAlt={mission?.data?.imageAlt} />
-      {services && <ServicesGridBlock data={services.data} limit={6} moreLink="/servicii" />}
+      {services && <ServicesGridBlock data={services.data} compact heading="Ce organizăm" moreLink="/servicii" />}
       {portfolio.slice(0, 3).map(({ block, description }) => (
         <GalleryBlock key={block.id} data={block.data} description={description} />
       ))}
@@ -84,8 +85,21 @@ function HomePage({ all, blocks, defaults }) {
   );
 }
 
+const PAGE_TITLES = {
+  home: "Steco Events — organizare de evenimente",
+  servicii: "Servicii — Steco Events",
+  portofoliu: "Portofoliu — Steco Events",
+  "misiunea-noastra": "Despre noi — Steco Events",
+  participanti: "Participanți — Steco Events",
+  contact: "Contact — Steco Events"
+};
+
 export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
   const { loading, blocks: all } = useAllBlocks();
+
+  useEffect(() => {
+    document.title = PAGE_TITLES[slug] || PAGE_TITLES.home;
+  }, [slug]);
   const defaults = { title: defaultTitle, subtitle: defaultSubtitle };
 
   if (loading) {
@@ -109,7 +123,8 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
   const rest = blocks
     .filter((block) => block !== hero)
     .map((block) => (same(block.data?.title, title) ? { ...block, data: { ...block.data, title: "" } } : block));
-  const subtitle = hero?.data?.subtitle || defaults.subtitle;
+  // Dacă pagina are antet în admin, subtitlul lui se folosește exact (gol înseamnă fără subtitlu).
+  const subtitle = hero ? hero.data?.subtitle || "" : defaults.subtitle;
   // Nu repetăm în antet un text care apare oricum imediat dedesubt.
   const repeatsBelow = rest.some((block) => block.data?.text && block.data.text.trim() === subtitle?.trim());
   const images = uniqueByUrl([...imagesFrom(blocks), ...spreadImages(all, 10).slice(5)]).slice(0, 4);

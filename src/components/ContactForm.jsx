@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { socialLinks, useSiteSettings } from "../lib/siteSettings";
 
@@ -6,7 +7,9 @@ const EVENT_TYPES = [
   { value: "nunta", label: "Nuntă" },
   { value: "botez", label: "Botez" },
   { value: "majorat", label: "Majorat" },
-  { value: "corporate", label: "Eveniment corporate" },
+  { value: "aniversare", label: "Aniversare" },
+  { value: "gender_reveal", label: "Gender reveal" },
+  { value: "candy_bar", label: "Candy bar" },
   { value: "altul", label: "Alt eveniment" }
 ];
 
@@ -270,7 +273,14 @@ export function ContactForm() {
                   onChange={update("consent")}
                   className="mt-1 h-4 w-4 shrink-0 accent-[var(--color-magenta)]"
                 />
-                Sunt de acord ca Steco Events să folosească aceste date doar ca să mă contacteze despre eveniment.
+                <span>
+                  Sunt de acord ca Steco Events să folosească aceste date doar ca să mă contacteze despre eveniment.
+                  Detalii în{" "}
+                  <Link to="/confidentialitate" className="text-ink underline">
+                    politica de confidențialitate
+                  </Link>
+                  .
+                </span>
               </label>
 
               {error && (

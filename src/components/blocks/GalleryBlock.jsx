@@ -196,7 +196,8 @@ export function GalleryBlock({ data, description }) {
 
           {images.length > 2 && (
             <div className="mt-6 flex items-center gap-4 px-4 text-[0.875rem] text-ink-soft sm:px-8">
-              <span>Trage sau derulează pozele</span>
+              <span className="[@media(pointer:coarse)]:hidden">Trage sau derulează pozele</span>
+              <span className="hidden [@media(pointer:coarse)]:inline">Glisează pentru mai multe poze</span>
               <span className="relative block h-px w-32 overflow-hidden bg-ink/15">
                 <span
                   data-strip-bar

@@ -55,6 +55,9 @@ export function Footer() {
 
       <div className="mx-auto mt-10 flex max-w-[1600px] flex-wrap justify-between gap-4 border-t border-cream/15 pt-6 text-[0.8125rem] text-cream/50">
         <p>© {new Date().getFullYear()} Steco Events</p>
+        <Link to="/confidentialitate" className="hover:text-cream">
+          Politica de confidențialitate
+        </Link>
         <Link to="/admin" className="hover:text-cream">
           Administrare
         </Link>

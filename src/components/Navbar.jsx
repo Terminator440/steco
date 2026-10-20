@@ -47,12 +47,47 @@ function useHeaderTheme(pathname) {
   return theme;
 }
 
+// Antetul se ascunde când derulezi în jos și reapare când urci, ca să nu stea peste text.
+// Departe de partea de sus primește un fundal, ca textul lui să nu se amestece cu pagina.
+function useScrollState() {
+  const [state, setState] = useState({ hidden: false, solid: false });
+
+  useEffect(() => {
+    let lastY = window.scrollY;
+    let frame = 0;
+
+    const update = () => {
+      frame = 0;
+      const y = window.scrollY;
+      const delta = y - lastY;
+      if (Math.abs(delta) < 6 && y > 0) return;
+      const hidden = y > 140 && delta > 0;
+      const solid = y > 40;
+      lastY = y;
+      setState((prev) => (prev.hidden === hidden && prev.solid === solid ? prev : { hidden, solid }));
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+
+    window.addEventListener("scroll", schedule, { passive: true });
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+    };
+  }, []);
+
+  return state;
+}
+
 export function Navbar() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const settings = useSiteSettings();
   const sectionTheme = useHeaderTheme(location.pathname);
   const theme = open ? "dark" : sectionTheme;
+  const scroll = useScrollState();
+  const hidden = scroll.hidden && !open;
 
   useEffect(() => {
     setOpen(false);
@@ -73,8 +108,10 @@ export function Navbar() {
     <>
       <header
         className={[
-          "fixed inset-x-0 top-0 z-50 transition-colors duration-300",
-          theme === "dark" ? "text-cream" : "text-ink"
+          "fixed inset-x-0 top-0 z-50 transition-[transform,background-color,color] duration-300",
+          theme === "dark" ? "text-cream" : "text-ink",
+          hidden ? "-translate-y-full focus-within:translate-y-0" : "translate-y-0",
+          scroll.solid && !open ? (theme === "dark" ? "bg-night/90" : "bg-paper/95 shadow-[0_1px_0_rgba(42,20,48,0.08)]") : ""
         ].join(" ")}
       >
         <nav className="mx-auto grid max-w-[1600px] grid-cols-[1fr_auto_1fr] items-center px-4 py-5 sm:px-8">
