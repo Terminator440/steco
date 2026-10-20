@@ -166,6 +166,7 @@ export function GalleryBlock({ data, description }) {
         <div className="min-w-0">
           <ul
             ref={stripRef}
+            data-strip
             tabIndex={0}
             aria-label={`Fotografii ${heading}. Derulează orizontal.`}
             className="no-scrollbar flex cursor-grab snap-x gap-3 overflow-x-auto overscroll-x-contain px-4 select-none active:cursor-grabbing sm:px-8 lg:pr-0 [@media(pointer:coarse)]:snap-mandatory"
@@ -197,7 +198,11 @@ export function GalleryBlock({ data, description }) {
             <div className="mt-6 flex items-center gap-4 px-4 text-[0.875rem] text-ink-soft sm:px-8">
               <span>Trage sau derulează pozele</span>
               <span className="relative block h-px w-32 overflow-hidden bg-ink/15">
-                <span className="strip-progress absolute inset-0 origin-left scale-x-[0.08] bg-ink" style={{ "--strip": timeline }} />
+                <span
+                  data-strip-bar
+                  className="strip-progress absolute inset-0 origin-left scale-x-[0.08] bg-ink"
+                  style={{ "--strip": timeline }}
+                />
               </span>
             </div>
           )}

@@ -51,9 +51,8 @@ export function Navbar() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const settings = useSiteSettings();
-  const isAdmin = location.pathname.startsWith("/admin");
   const sectionTheme = useHeaderTheme(location.pathname);
-  const theme = open || isAdmin ? "dark" : sectionTheme;
+  const theme = open ? "dark" : sectionTheme;
 
   useEffect(() => {
     setOpen(false);
@@ -75,8 +74,7 @@ export function Navbar() {
       <header
         className={[
           "fixed inset-x-0 top-0 z-50 transition-colors duration-300",
-          theme === "dark" ? "text-cream" : "text-ink",
-          isAdmin ? "bg-night" : ""
+          theme === "dark" ? "text-cream" : "text-ink"
         ].join(" ")}
       >
         <nav className="mx-auto grid max-w-[1600px] grid-cols-[1fr_auto_1fr] items-center px-4 py-5 sm:px-8">

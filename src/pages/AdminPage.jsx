@@ -1,272 +1,118 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
-import { withSupabaseImageParams } from "../lib/imageUtils";
 import { ContactRequestsPanel, SiteSettingsPanel } from "./AdminPanels";
-import { clearBlocksCache } from "../lib/content";
+import { PageEditor } from "./admin/PageEditor";
+import { Notice, buttonClass, inputClass } from "./admin/ui";
 
-const PAGE_SLUGS = [
-  { slug: "home", label: "Home" },
-  { slug: "servicii", label: "Servicii" },
-  { slug: "portofoliu", label: "Portofoliu" },
-  { slug: "contact", label: "Contact" },
-  { slug: "misiunea-noastra", label: "Misiunea Noastră" },
-  { slug: "participanti", label: "Participanți" }
+const TABS = [
+  { id: "pagini", label: "Pagini" },
+  { id: "cereri", label: "Cereri de ofertă" },
+  { id: "setari", label: "Date de contact" }
 ];
 
-const BLOCK_TYPES = [
-  { value: "hero", label: "Hero" },
-  { value: "text_photo", label: "Text & Foto" },
-  { value: "services_grid", label: "Grilă Servicii" },
-  { value: "text_section", label: "Secțiune Text" },
-  { value: "participants_grid", label: "Grilă Participanți" },
-  { value: "gallery", label: "Galerie" }
-];
-function getUID() {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  // Coloana id din Supabase este uuid, așa că fallback-ul generează tot un uuid v4.
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+function Wordmark() {
+  return <span className="font-display text-[1.25rem] tracking-[0.3em]">STECO</span>;
 }
 
-function createEmptyBlock(type, pageSlug, orderIndex) {
-  if (type === "hero") {
-    return {
-      page_slug: pageSlug,
-      block_type: "hero",
-      order_index: orderIndex,
-      data: {
-        title: "",
-        subtitle: "",
-        backgroundImageUrl: "",
-        buttonLabel: "",
-        buttonHref: ""
-      }
-    };
-  }
+function LoginScreen({ session, onLogout }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [signingIn, setSigningIn] = useState(false);
+  const [error, setError] = useState("");
 
-  if (type === "text_photo") {
-    return {
-      page_slug: pageSlug,
-      block_type: "text_photo",
-      order_index: orderIndex,
-      data: {
-        title: "",
-        text: "",
-        imageUrl: "",
-        imageAlt: "",
-        imagePosition: "right"
-      }
-    };
-  }
-
-  if (type === "text_section") {
-    return {
-      page_slug: pageSlug,
-      block_type: "text_section",
-      order_index: orderIndex,
-      data: {
-        text: ""
-      }
-    };
-  }
-
-  if (type === "participants_grid") {
-    return {
-      page_slug: pageSlug,
-      block_type: "participants_grid",
-      order_index: orderIndex,
-      data: {
-        heading: "",
-        participants: []
-      }
-    };
-  }
-
-  if (type === "services_grid") {
-    return {
-      page_slug: pageSlug,
-      block_type: "services_grid",
-      order_index: orderIndex,
-      data: {
-        heading: "",
-        items: []
-      }
-    };
-  }
-
-  return {
-    page_slug: pageSlug,
-    block_type: "gallery",
-    order_index: orderIndex,
-    data: {
-      heading: "",
-      images: []
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError("");
+    setSigningIn(true);
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    setSigningIn(false);
+    if (signInError) {
+      setError("Email sau parolă greșită. Verifică și încearcă din nou.");
+      return;
     }
-  };
-}
-
-function mapLegacySectionToBlock(row) {
-  if (row.section_type === "hero") {
-    return {
-      block_type: "hero",
-      order_index: row.order_index ?? 0,
-      data: {
-        title: row.content_json?.title || "",
-        subtitle: row.content_json?.subtitle || "",
-        backgroundImageUrl: row.content_json?.backgroundImageUrl || "",
-        buttonLabel: row.content_json?.ctaLabel || "",
-        buttonHref: row.content_json?.ctaHref || ""
-      }
-    };
+    setPassword("");
   }
 
-  if (row.section_type === "services_grid") {
-    return {
-      block_type: "services_grid",
-      order_index: row.order_index ?? 0,
-      data: {
-        heading: row.content_json?.heading || "",
-        items: row.content_json?.items || []
-      }
-    };
-  }
-
-  if (row.section_type === "text_section") {
-    return {
-      block_type: "text_section",
-      order_index: row.order_index ?? 0,
-      data: {
-        text: row.content_json?.text || ""
-      }
-    };
-  }
-
-  if (row.section_type === "participants_grid") {
-    return {
-      block_type: "participants_grid",
-      order_index: row.order_index ?? 0,
-      data: {
-        heading: row.content_json?.heading || "",
-        participants: row.content_json?.participants || []
-      }
-    };
-  }
-
-  if (row.section_type === "gallery") {
-    return {
-      block_type: "gallery",
-      order_index: row.order_index ?? 0,
-      data: {
-        heading: row.content_json?.heading || "",
-        images: row.content_json?.images || []
-      }
-    };
-  }
-
-  if (row.section_type === "text_block") {
-    return {
-      block_type: "text_photo",
-      order_index: row.order_index ?? 0,
-      data: {
-        title: row.content_json?.heading || "",
-        text: row.content_json?.text || "",
-        imageUrl: "",
-        imageAlt: "",
-        imagePosition: "right"
-      }
-    };
-  }
-
-  return null;
-}
-
-function TrashIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M4 7h16" />
-      <path d="M9 7V5h6v2" />
-      <path d="M7 7l1 12h8l1-12" />
-      <path d="M10 11v5M14 11v5" />
-    </svg>
+    <main className="flex min-h-screen items-center justify-center bg-paper px-4">
+      <div className="w-full max-w-sm">
+        <div className="mb-8 text-center">
+          <Wordmark />
+          <h1 className="mt-4 text-[1.375rem] font-semibold">Administrare site</h1>
+          <p className="mt-1 text-[0.9375rem] text-ink-soft">Intră cu emailul și parola contului de admin.</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="grid gap-4 rounded-2xl border border-line bg-white p-6">
+          <div>
+            <label htmlFor="admin-email" className="mb-1.5 block text-[0.875rem] font-medium">
+              Email
+            </label>
+            <input
+              id="admin-email"
+              type="email"
+              required
+              autoComplete="username"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="admin-password" className="mb-1.5 block text-[0.875rem] font-medium">
+              Parolă
+            </label>
+            <input
+              id="admin-password"
+              type="password"
+              required
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+
+          {error && <Notice type="error">{error}</Notice>}
+          {session && <Notice type="error">Contul {session.user.email} nu are drept de administrare.</Notice>}
+
+          <button type="submit" disabled={signingIn} className={`${buttonClass.primary} w-full`}>
+            {signingIn ? "Se verifică..." : "Intră în cont"}
+          </button>
+          {session && (
+            <button type="button" onClick={onLogout} className={buttonClass.quiet}>
+              Ieși din contul {session.user.email}
+            </button>
+          )}
+        </form>
+
+        <p className="mt-6 text-center text-[0.875rem]">
+          <Link to="/" className="text-ink-soft underline hover:text-ink">
+            Înapoi la site
+          </Link>
+        </p>
+      </div>
+    </main>
   );
 }
 
 export function AdminPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [session, setSession] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [authChecking, setAuthChecking] = useState(true);
-  const [signingIn, setSigningIn] = useState(false);
-  const [authError, setAuthError] = useState("");
-  const [activeTab, setActiveTab] = useState("pagini");
-  const isAuthed = Boolean(session && isAdmin);
-
-  const [selectedSlug, setSelectedSlug] = useState(PAGE_SLUGS[0].slug);
-  const [blocks, setBlocks] = useState([]);
-  const [showBlockMenu, setShowBlockMenu] = useState(false);
-  const [loadingPage, setLoadingPage] = useState(false);
-  const [savingPage, setSavingPage] = useState(false);
-  const [pageMessage, setPageMessage] = useState("");
-  const [pageMessageType, setPageMessageType] = useState("info");
-
-  const [uploadingImagePath, setUploadingImagePath] = useState("");
-  const [uploadError, setUploadError] = useState("");
-
-  async function fetchBlocksForSlug(slug) {
-    if (!supabase) {
-      return { blocks: [], message: "Supabase nu este configurat.", messageType: "error" };
-    }
-
-    const { data, error } = await supabase
-      .from("steco_page_blocks")
-      .select("*")
-      .eq("page_slug", slug)
-      .order("order_index", { ascending: true });
-
-    if (error) {
-      return {
-        blocks: [],
-        message: "Nu s-au putut încărca blocurile pentru această pagină.",
-        messageType: "error"
-      };
-    }
-
-    const mapped = (data || []).map((row) => ({
-      id: row.id,
-      page_slug: row.page_slug,
-      block_type: row.block_type,
-      order_index: row.order_index ?? 0,
-      data: row.content_json || row.block_data || {}
-    }));
-
-    return {
-      blocks: mapped,
-      message: mapped.length ? "" : "Pagina nu are încă blocuri.",
-      messageType: mapped.length ? "info" : "success"
-    };
-  }
+  const [checking, setChecking] = useState(true);
+  const [tab, setTab] = useState("pagini");
+  const [newRequests, setNewRequests] = useState(0);
 
   useEffect(() => {
     if (!supabase) {
-      setAuthChecking(false);
+      setChecking(false);
       return undefined;
     }
-
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
-      if (!data.session) setAuthChecking(false);
+      if (!data.session) setChecking(false);
     });
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-    });
-
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
     return () => listener.subscription.unsubscribe();
   }, []);
 
@@ -275,1112 +121,104 @@ export function AdminPage() {
       setIsAdmin(false);
       return undefined;
     }
-
-    let isMounted = true;
-    setAuthChecking(true);
-
+    let active = true;
+    setChecking(true);
     // RLS lasă fiecare utilizator să-și vadă doar propriul rând din steco_admins.
     supabase
       .from("steco_admins")
       .select("user_id")
       .eq("user_id", session.user.id)
       .maybeSingle()
-      .then(({ data, error }) => {
-        if (!isMounted) return;
-        if (error) console.error("[Steco] Eroare la verificarea drepturilor de admin:", error.message);
+      .then(({ data }) => {
+        if (!active) return;
         setIsAdmin(Boolean(data));
-        if (!data) setAuthError("Contul există, dar nu are drept de administrare.");
-        setAuthChecking(false);
+        setChecking(false);
       });
-
     return () => {
-      isMounted = false;
+      active = false;
     };
   }, [session]);
 
+  const refreshCount = useCallback(async () => {
+    const { count } = await supabase
+      .from("steco_contact_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "nou");
+    setNewRequests(count || 0);
+  }, []);
+
   useEffect(() => {
-    if (!isAuthed || !supabase) return;
+    if (isAdmin) refreshCount();
+  }, [isAdmin, refreshCount, tab]);
 
-    let isMounted = true;
-
-    async function loadBlocks() {
-      setLoadingPage(true);
-      setPageMessage("");
-      setPageMessageType("info");
-
-      const result = await fetchBlocksForSlug(selectedSlug);
-      if (!isMounted) return;
-
-      setBlocks(result.blocks);
-      if (result.message) {
-        setPageMessage(result.message);
-        setPageMessageType(result.messageType);
-      }
-
-      setLoadingPage(false);
-    }
-
-    loadBlocks();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedSlug, isAuthed]);
-
-  async function handleLogin(e) {
-    e.preventDefault();
-    setAuthError("");
-
-    if (!supabase) {
-      setAuthError("Supabase nu este configurat.");
-      return;
-    }
-
-    setSigningIn(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-    setSigningIn(false);
-
-    if (error) {
-      setAuthError("Email sau parolă greșită.");
-      return;
-    }
-
-    setPassword("");
-  }
-
-  async function handleLogout() {
+  async function logout() {
     await supabase?.auth.signOut();
     setSession(null);
     setIsAdmin(false);
-    setBlocks([]);
   }
 
-  function updateBlock(index, newBlock) {
-    setBlocks((prev) => prev.map((block, i) => (i === index ? { ...block, ...newBlock } : block)));
-  }
-
-  function handleAddBlock(type) {
-    setBlocks((prev) => {
-      const orderIndex = prev.length ? prev[prev.length - 1].order_index + 1 : 0;
-      return [...prev, createEmptyBlock(type, selectedSlug, orderIndex)];
-    });
-    setShowBlockMenu(false);
-  }
-
-  function moveBlock(index, direction) {
-    setBlocks((prev) => {
-      const next = [...prev];
-      const targetIndex = index + direction;
-      if (targetIndex < 0 || targetIndex >= next.length) return prev;
-      const [item] = next.splice(index, 1);
-      next.splice(targetIndex, 0, item);
-      return next.map((block, i) => ({ ...block, order_index: i }));
-    });
-  }
-
-  function deleteBlock(index) {
-    setBlocks((prev) =>
-      prev
-        .filter((_, i) => i !== index)
-        .map((block, i) => ({
-          ...block,
-          order_index: i
-        }))
-    );
-  }
-
-  async function handleDeleteBlock(index) {
-    const block = blocks[index];
-    if (!block) return;
-
-    // Dacă blocul nu are `id` (e creat local dar încă nesalvat), ștergem doar din UI.
-    if (!supabase || block.id == null) {
-      deleteBlock(index);
-      return;
-    }
-
-    // UI rapid: scoatem imediat din listă, apoi ștergem din Supabase.
-    setBlocks((prev) =>
-      prev
-        .filter((b) => b.id !== block.id)
-        .map((b, i) => ({
-          ...b,
-          order_index: i
-        }))
-    );
-
-    setSavingPage(true);
-    setPageMessage("");
-    setPageMessageType("info");
-
-    try {
-      const { error } = await supabase.from("steco_page_blocks").delete().eq("id", block.id);
-
-      if (error) {
-        // eslint-disable-next-line no-console
-        console.error("DETALII EROARE SUPABASE (delete):", error);
-        window.alert("Ștergerea a eșuat: " + (error.message || "necunoscută"));
-        setPageMessage("A apărut o eroare la ștergere.");
-        setPageMessageType("error");
-        const refreshed = await fetchBlocksForSlug(selectedSlug);
-        setBlocks(refreshed.blocks);
-        return;
-      }
-
-      clearBlocksCache();
-      setPageMessage("Blocul a fost șters definitiv.");
-      setPageMessageType("success");
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("DETALII EROARE SUPABASE (delete catch):", err);
-      window.alert("Ștergerea a eșuat: " + (err?.message || "necunoscută"));
-      setPageMessage("A apărut o eroare la ștergere.");
-      setPageMessageType("error");
-      const refreshed = await fetchBlocksForSlug(selectedSlug);
-      setBlocks(refreshed.blocks);
-    } finally {
-      setSavingPage(false);
-    }
-  }
-
-  async function upsertBlocksToSupabase(blocksToSave) {
-    if (!supabase) {
-      window.alert("Supabase nu este configurat.");
-      throw new Error("Supabase nu este configurat.");
-    }
-
-    const safeBlocks = Array.isArray(blocksToSave) ? blocksToSave : [];
-
-    const payload = safeBlocks.map((block, index) => ({
-      id: block.id ?? getUID(),
-      page_slug: block.page_slug || selectedSlug,
-      block_type: block.block_type,
-      content_json: block.data || {},
-      order_index: block.order_index ?? index
-    }));
-
-    // Cerință: logăm înainte de apelul către Supabase.
-    console.log("Date trimise spre salvare:", safeBlocks);
-    // eslint-disable-next-line no-console
-    console.log("Payload UPSERT (incl. ID când există):", payload);
-
-    const upsertOptions = { onConflict: "id" };
-
-    let didAlert = false;
-    try {
-      const { error: upsertError } = await supabase
-        .from("steco_page_blocks")
-        .upsert(payload, upsertOptions);
-
-      if (upsertError) {
-        didAlert = true;
-        window.alert("Salvarea a eșuat: " + (upsertError.message || "necunoscută"));
-        // eslint-disable-next-line no-console
-        console.error("DETALII EROARE SUPABASE (upsert):", upsertError);
-        throw upsertError;
-      }
-
-      clearBlocksCache();
-      const refreshed = await fetchBlocksForSlug(selectedSlug);
-      setBlocks(refreshed.blocks);
-      return refreshed.blocks;
-    } catch (err) {
-      if (!didAlert) {
-        window.alert("Salvarea a eșuat: " + (err?.message || "necunoscută"));
-      }
-      // eslint-disable-next-line no-console
-      console.error("DETALII EROARE SUPABASE (catch):", err);
-      throw err;
-    }
-  }
-
-  async function handlePublish(e) {
-    e.preventDefault();
-    setSavingPage(true);
-    setPageMessage("");
-    setPageMessageType("info");
-
-    try {
-      await upsertBlocksToSupabase(blocks);
-      setPageMessage("Pagina a fost publicată cu succes. Conținutul a fost reîmprospătat.");
-      setPageMessageType("success");
-    } catch (err) {
-      setPageMessage("A apărut o eroare la salvarea blocurilor.");
-      setPageMessageType("error");
-    } finally {
-      setSavingPage(false);
-    }
-  }
-
-  function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-
-  async function handleImageUpload(event, pageSlug, blockIndex, fieldPath) {
-    const currentBlock = blocks[blockIndex];
-    const blockType = currentBlock?.block_type || "necunoscut";
-
-    if (blockType === "services_grid") {
-      // eslint-disable-next-line no-console
-      console.log("UPLOAD BLOCAT PENTRU SERVICES_GRID");
-      return;
-    }
-
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    // eslint-disable-next-line no-console
-    console.log("UPLOAD DECLANȘAT MANUAL");
-
-    setUploadError("");
-    const key = `${blockIndex}-${fieldPath}`;
-    setUploadingImagePath(key);
-
-    let imageValue = "";
-
-    const currentPage = pageSlug || currentBlock?.page_slug || selectedSlug || "necunoscut";
-
-    if (supabase) {
-      const filePath = `steco-images/${currentPage}/${Date.now()}-${file.name}`;
-
-      const { error: uploadErr } = await supabase
-        .storage
-        .from("steco-images")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false
-        });
-
-      if (!uploadErr) {
-        const { data: publicData } = supabase
-          .storage
-          .from("steco-images")
-          .getPublicUrl(filePath);
-
-        imageValue = publicData?.publicUrl || "";
-      } else {
-        // eslint-disable-next-line no-console
-        console.error("Eroare upload Supabase, fallback pe base64:", uploadErr);
-      }
-    }
-
-    if (!imageValue) {
-      try {
-        imageValue = await fileToBase64(file);
-      } catch (err) {
-        setUploadError("Eroare la prelucrarea imaginii.");
-        setUploadingImagePath("");
-        // eslint-disable-next-line no-console
-        console.error("Eroare Base64:", err);
-        return;
-      }
-    }
-
-    setBlocks((prev) =>
-      prev.map((block, idx) => {
-        if (idx !== blockIndex) return block;
-        const newData = { ...block.data };
-
-        if (fieldPath === "hero.background") {
-          newData.backgroundImageUrl = imageValue;
-        } else if (fieldPath === "text_photo.image") {
-          newData.imageUrl = imageValue;
-        } else if (fieldPath.startsWith("services_grid.icon.")) {
-          const itemIndex = Number(fieldPath.split(".")[2]);
-          const items = [...(newData.items || [])];
-          items[itemIndex] = { ...(items[itemIndex] || {}), iconUrl: imageValue };
-          newData.items = items;
-        } else if (fieldPath.startsWith("participants_grid.photo.")) {
-          const participantIndex = Number(fieldPath.split(".")[2]);
-          const participants = [...(newData.participants || [])];
-          participants[participantIndex] = {
-            ...(participants[participantIndex] || {}),
-            photoUrl: imageValue
-          };
-          newData.participants = participants;
-        } else if (fieldPath.startsWith("gallery.image.")) {
-          const imageIndex = Number(fieldPath.split(".")[2]);
-          const images = [...(newData.images || [])];
-          images[imageIndex] = { ...(images[imageIndex] || {}), url: imageValue };
-          newData.images = images;
-        }
-
-        return { ...block, data: newData };
-      })
-    );
-
-    setUploadingImagePath("");
-  }
-
-  if (authChecking && !isAuthed) {
+  if (!supabase) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-sm text-slate-300">
-        Se verifică sesiunea...
+      <main className="flex min-h-screen items-center justify-center bg-paper px-4">
+        <Notice type="error">Site-ul nu e legat la Supabase. Verifică variabilele VITE_SUPABASE_URL și VITE_SUPABASE_ANON_KEY.</Notice>
       </main>
     );
   }
 
-  if (!isAuthed) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
-        <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-2xl sm:p-8">
-          <div className="mb-6 flex flex-col items-center gap-3">
-            <span className="text-xl font-serif font-bold tracking-[0.2em] uppercase text-slate-50">
-              STECO <span className="text-[#D4AF37]">EVENTS</span>
-            </span>
-            <h1 className="text-center font-display text-2xl text-slate-50">Admin Steco</h1>
-          </div>
+  if (checking) {
+    return <main className="flex min-h-screen items-center justify-center bg-paper text-ink-soft">Se verifică sesiunea...</main>;
+  }
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-slate-300" htmlFor="email">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                autoComplete="username"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none ring-0 ring-rose-500/30 focus:border-rose-500 focus:ring-2"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-slate-300" htmlFor="password">
-                Parolă
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none ring-0 ring-rose-500/30 focus:border-rose-500 focus:ring-2"
-              />
-            </div>
-
-            {authError && (
-              <p className="rounded-md border border-red-500/70 bg-red-950/50 px-3 py-2 text-xs text-red-100">
-                {authError}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={signingIn}
-              className="btn-primary flex w-full items-center justify-center disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {signingIn ? "Se verifică..." : "Intră în cont"}
-            </button>
-
-            {session && !isAdmin && (
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="w-full text-center text-xs text-slate-400 underline hover:text-slate-200"
-              >
-                Ieși din contul {session.user.email}
-              </button>
-            )}
-          </form>
-        </div>
-      </main>
-    );
+  if (!session || !isAdmin) {
+    return <LoginScreen session={session} onLogout={logout} />;
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 pb-16 pt-24 sm:px-6 lg:px-8">
-      <div className="mx-auto mb-6 flex max-w-6xl items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3">
-        <div className="flex items-center gap-3">
-          <span className="text-xl font-serif font-bold tracking-[0.2em] uppercase text-slate-50">
-            STECO <span className="text-[#D4AF37]">EVENTS</span>
-          </span>
-          <div>
-            <p className="text-xs uppercase tracking-[0.22em] text-rose-400">Steco Block Editor</p>
-            <p className="text-sm text-slate-200">Construiește pagina din blocuri</p>
+    <div className="min-h-screen bg-paper text-ink">
+      <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3 sm:px-6">
+          <Link to="/" className="flex items-baseline gap-3" title="Deschide site-ul">
+            <Wordmark />
+            <span className="text-[0.875rem] text-ink-soft">admin</span>
+          </Link>
+
+          <nav aria-label="Secțiuni administrare" className="no-scrollbar order-3 -mx-1 flex w-full gap-1 overflow-x-auto sm:order-none sm:w-auto">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id)}
+                aria-current={tab === t.id ? "page" : undefined}
+                className={[
+                  "inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-[0.9375rem] transition-colors",
+                  tab === t.id ? "bg-plum text-cream" : "text-ink hover:bg-blush/60"
+                ].join(" ")}
+              >
+                {t.label}
+                {t.id === "cereri" && newRequests > 0 && (
+                  <span className="rounded-full bg-magenta px-2 py-0.5 text-[0.75rem] font-semibold text-cream">{newRequests}</span>
+                )}
+              </button>
+            ))}
+          </nav>
+
+          <div className="ml-auto flex items-center gap-2">
+            <span className="hidden text-[0.875rem] text-ink-soft md:inline">{session.user.email}</span>
+            <button type="button" onClick={logout} className={buttonClass.quiet}>
+              Ieși
+            </button>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="rounded-full border border-slate-700 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300 hover:border-rose-500 hover:text-rose-400"
-        >
-          Logout
-        </button>
-      </div>
+      </header>
 
-      <nav className="mx-auto mb-6 flex max-w-6xl gap-2" aria-label="Secțiuni administrare">
-        {[
-          { id: "pagini", label: "Pagini" },
-          { id: "cereri", label: "Cereri de ofertă" },
-          { id: "setari", label: "Date de contact" }
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            aria-pressed={activeTab === tab.id}
-            className={[
-              "rounded-full border px-4 py-2 text-sm font-medium",
-              activeTab === tab.id
-                ? "border-rose-500 bg-rose-500/10 text-rose-200"
-                : "border-slate-700 text-slate-300 hover:border-slate-500"
-            ].join(" ")}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
-
-      {activeTab === "cereri" && <ContactRequestsPanel />}
-      {activeTab === "setari" && <SiteSettingsPanel />}
-
-      <div className={activeTab === "pagini" ? "mx-auto flex max-w-6xl flex-col gap-6 lg:flex-row" : "hidden"}>
-        <aside className="w-full rounded-2xl border border-slate-800 bg-slate-900/80 p-5 lg:w-72">
-          <div className="mb-4">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-              Pagina editată
-            </p>
-            <select
-              value={selectedSlug}
-              onChange={(e) => setSelectedSlug(e.target.value)}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none ring-0 ring-rose-500/30 focus:border-rose-500 focus:ring-2"
-            >
-              {PAGE_SLUGS.map((page) => (
-                <option key={page.slug} value={page.slug}>
-                  {page.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowBlockMenu((prev) => !prev)}
-              className="w-full rounded-full bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 hover:bg-slate-100"
-            >
-              Adaugă Bloc
-            </button>
-
-            {showBlockMenu && (
-              <div className="mt-2 space-y-2 rounded-xl border border-slate-700 bg-slate-950 p-2">
-                {BLOCK_TYPES.map((type) => (
-                  <button
-                    key={type.value}
-                    type="button"
-                    onClick={() => handleAddBlock(type.value)}
-                    className="w-full rounded-lg border border-slate-700 px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-200 hover:border-rose-500 hover:text-rose-400"
-                  >
-                    {type.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <p className="mt-4 text-[11px] text-slate-500">
-            Publicare în <code className="font-mono">steco_page_blocks</code> după{" "}
-            <code className="font-mono">page_slug</code>.
-          </p>
-        </aside>
-
-        <section className="w-full flex-1 rounded-2xl border border-slate-800 bg-slate-900/80 p-5 sm:p-6">
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.24em] text-rose-400">Lista de blocuri</p>
-              <p className="text-sm text-slate-300">Editare live, ordonare și publicare unificată</p>
-            </div>
-            <div className="rounded-full border border-slate-700 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-slate-400">
-              slug: <span className="font-mono text-rose-400">{selectedSlug}</span>
-            </div>
-          </div>
-
-          {loadingPage ? (
-            <p className="text-sm text-slate-300">Se încarcă blocurile paginii...</p>
-          ) : (
-            <form onSubmit={handlePublish} className="space-y-4">
-              <div className="space-y-4">
-                {blocks.map((block, index) => {
-                  const key = block.id || `${block.block_type}-${index}`;
-                  const typeLabel =
-                    BLOCK_TYPES.find((type) => type.value === block.block_type)?.label || block.block_type;
-                  const data = block.data || {};
-
-                  return (
-                    <div key={key} className="rounded-2xl bg-white p-4 text-slate-900 shadow-xl sm:p-5">
-                      <div className="mb-3 flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-[11px] uppercase tracking-[0.2em] text-rose-600">{typeLabel}</p>
-                          <p className="text-xs text-slate-500">Bloc #{index + 1}</p>
-                        </div>
-
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => moveBlock(index, -1)}
-                            className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium hover:bg-slate-100"
-                          >
-                            Sus
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => moveBlock(index, 1)}
-                            className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium hover:bg-slate-100"
-                          >
-                            Jos
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteBlock(index)}
-                            className="inline-flex items-center justify-center rounded-md border border-red-200 px-2 py-1 text-red-600 hover:bg-red-50"
-                            aria-label={`Șterge blocul ${index + 1}`}
-                          >
-                            <TrashIcon />
-                          </button>
-                        </div>
-                      </div>
-
-                      {block.block_type === "hero" && (
-                        <div className="space-y-3">
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-600">Titlu</label>
-                            <input
-                              type="text"
-                              value={data.title || ""}
-                              onChange={(e) => updateBlock(index, { data: { ...data, title: e.target.value } })}
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-rose-300 focus:ring-2"
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-600">Subtitlu</label>
-                            <textarea
-                              rows={3}
-                              value={data.subtitle || ""}
-                              onChange={(e) => updateBlock(index, { data: { ...data, subtitle: e.target.value } })}
-                              className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-rose-300 focus:ring-2"
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-600">Imagine fundal</label>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => handleImageUpload(e, selectedSlug, index, "hero.background")}
-                              className="block w-full text-xs text-slate-700 file:mr-3 file:rounded-md file:border file:border-slate-300 file:bg-slate-100 file:px-3 file:py-1.5 file:font-semibold file:text-slate-800 hover:file:bg-slate-200"
-                            />
-                            {uploadingImagePath === `${index}-hero.background` && (
-                              <p className="mt-1 text-[11px] text-slate-500">Se încarcă imaginea...</p>
-                            )}
-                            {data.backgroundImageUrl && (
-                              <div className="relative mt-2 aspect-[3/2] w-36 overflow-hidden rounded-md border border-slate-200 bg-slate-200/70">
-                                <div
-                                  aria-hidden="true"
-                                  className="absolute inset-0 scale-110 bg-gradient-to-br from-slate-100 to-slate-300 blur-xl"
-                                />
-                                <img
-                                  src={withSupabaseImageParams(data.backgroundImageUrl, { width: 360, quality: 80 })}
-                                  alt="Preview fundal hero"
-                                  width="360"
-                                  height="240"
-                                  loading="lazy"
-                                  decoding="async"
-                                  className="relative z-10 h-full w-full object-cover"
-                                />
-                              </div>
-                            )}
-                          </div>
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-600">Text buton</label>
-                              <input
-                                type="text"
-                                value={data.buttonLabel || ""}
-                                onChange={(e) => updateBlock(index, { data: { ...data, buttonLabel: e.target.value } })}
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-rose-300 focus:ring-2"
-                              />
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-600">Link buton</label>
-                              <input
-                                type="text"
-                                value={data.buttonHref || ""}
-                                onChange={(e) => updateBlock(index, { data: { ...data, buttonHref: e.target.value } })}
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-rose-300 focus:ring-2"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {block.block_type === "text_photo" && (
-                        <div className="space-y-3">
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-600">Titlu</label>
-                            <input
-                              type="text"
-                              value={data.title || ""}
-                              onChange={(e) => updateBlock(index, { data: { ...data, title: e.target.value } })}
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-rose-300 focus:ring-2"
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-600">Text</label>
-                            <textarea
-                              rows={5}
-                              value={data.text || ""}
-                              onChange={(e) => updateBlock(index, { data: { ...data, text: e.target.value } })}
-                              className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-rose-300 focus:ring-2"
-                            />
-                          </div>
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-600">Poziție imagine</label>
-                              <select
-                                value={data.imagePosition || "right"}
-                                onChange={(e) =>
-                                  updateBlock(index, { data: { ...data, imagePosition: e.target.value } })
-                                }
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-rose-300 focus:ring-2"
-                              >
-                                <option value="right">Text stânga · Poză dreapta</option>
-                                <option value="left">Poză stânga · Text dreapta</option>
-                              </select>
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-600">Alt imagine</label>
-                              <input
-                                type="text"
-                                value={data.imageAlt || ""}
-                                onChange={(e) => updateBlock(index, { data: { ...data, imageAlt: e.target.value } })}
-                                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-rose-300 focus:ring-2"
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-600">Imagine</label>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => handleImageUpload(e, selectedSlug, index, "text_photo.image")}
-                              className="block w-full text-xs text-slate-700 file:mr-3 file:rounded-md file:border file:border-slate-300 file:bg-slate-100 file:px-3 file:py-1.5 file:font-semibold file:text-slate-800 hover:file:bg-slate-200"
-                            />
-                            {uploadingImagePath === `${index}-text_photo.image` && (
-                              <p className="mt-1 text-[11px] text-slate-500">Se încarcă imaginea...</p>
-                            )}
-                            {data.imageUrl && (
-                              <div className="relative mt-2 aspect-[3/2] w-36 overflow-hidden rounded-md border border-slate-200 bg-slate-200/70">
-                                <div
-                                  aria-hidden="true"
-                                  className="absolute inset-0 scale-110 bg-gradient-to-br from-slate-100 to-slate-300 blur-xl"
-                                />
-                                <img
-                                  src={withSupabaseImageParams(data.imageUrl, { width: 360, quality: 80 })}
-                                  alt={data.imageAlt || "Preview text și foto"}
-                                  width="360"
-                                  height="240"
-                                  loading="lazy"
-                                  decoding="async"
-                                  className="relative z-10 h-full w-full object-cover"
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {block.block_type === "services_grid" && (
-                        <div className="space-y-4">
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-600">Titlu Secțiune Grilă</label>
-                            <input
-                              type="text"
-                              value={data.heading || ""}
-                              onChange={(e) => updateBlock(index, { data: { ...data, heading: e.target.value } })}
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-300"
-                              placeholder="Ex: Serviciile Noastre"
-                            />
-                          </div>
-
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                                Lista Servicii (Doar Text)
-                              </p>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const items = [...(data.items || [])];
-                                  items.push({ id: getUID(), title: "", description: "" });
-                                  updateBlock(index, { data: { ...data, items } });
-                                }}
-                                className="rounded-full bg-slate-900 px-3 py-1 text-[10px] font-bold uppercase text-white hover:bg-slate-800"
-                              >
-                                + Adaugă Serviciu
-                              </button>
-                            </div>
-
-                            {(data.items || []).map((item, itemIndex) => (
-                              <div
-                                key={item.id || itemIndex}
-                                className="relative rounded-xl border border-slate-200 bg-slate-50 p-4"
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const items = (data.items || []).filter((_, i) => i !== itemIndex);
-                                    updateBlock(index, { data: { ...data, items } });
-                                  }}
-                                  className="absolute right-2 top-2 text-slate-400 hover:text-red-500"
-                                >
-                                  <TrashIcon />
-                                </button>
-
-                                <div className="grid gap-3">
-                                  <div>
-                                    <label className="block text-[10px] font-bold uppercase text-slate-500">
-                                      Nume Serviciu
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={item.title || ""}
-                                      onChange={(e) => {
-                                        const items = [...(data.items || [])];
-                                        items[itemIndex] = {
-                                          ...(items[itemIndex] || {}),
-                                          title: e.target.value
-                                        };
-                                        updateBlock(index, { data: { ...data, items } });
-                                      }}
-                                      className="w-full border-b border-slate-300 bg-transparent py-1 text-sm font-semibold outline-none focus:border-rose-500"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-[10px] font-bold uppercase text-slate-500">
-                                      Descriere
-                                    </label>
-                                    <textarea
-                                      rows={2}
-                                      value={item.description || ""}
-                                      onChange={(e) => {
-                                        const items = [...(data.items || [])];
-                                        items[itemIndex] = {
-                                          ...(items[itemIndex] || {}),
-                                          description: e.target.value
-                                        };
-                                        updateBlock(index, { data: { ...data, items } });
-                                      }}
-                                      className="w-full border-b border-slate-300 bg-transparent py-1 text-sm outline-none focus:border-rose-500"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {block.block_type === "text_section" && (
-                        <div className="space-y-3">
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-600">
-                              Conținut secțiune
-                            </label>
-                            <textarea
-                              rows={8}
-                              value={data.text || ""}
-                              onChange={(e) => updateBlock(index, { data: { ...data, text: e.target.value } })}
-                              className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-rose-300 focus:ring-2"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {block.block_type === "participants_grid" && (
-                        <div className="space-y-4">
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-600">
-                              Titlu Secțiune Participanți
-                            </label>
-                            <input
-                              type="text"
-                              value={data.heading || ""}
-                              onChange={(e) => updateBlock(index, { data: { ...data, heading: e.target.value } })}
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-300"
-                              placeholder="Ex: Participanți"
-                            />
-                          </div>
-
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                                Lista Participanți
-                              </p>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const participants = [...(data.participants || [])];
-                                  participants.push({ id: getUID(), name: "", photoUrl: "" });
-                                  updateBlock(index, { data: { ...data, participants } });
-                                }}
-                                className="rounded-full bg-slate-900 px-3 py-1 text-[10px] font-bold uppercase text-white hover:bg-slate-800"
-                              >
-                                + Adaugă Participant
-                              </button>
-                            </div>
-
-                            {(data.participants || []).map((participant, participantIndex) => (
-                              <div
-                                key={participant.id || participantIndex}
-                                className="relative rounded-xl border border-slate-200 bg-slate-50 p-4"
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const participants = (data.participants || []).filter(
-                                      (_, i) => i !== participantIndex
-                                    );
-                                    updateBlock(index, { data: { ...data, participants } });
-                                  }}
-                                  className="absolute right-2 top-2 text-slate-400 hover:text-red-500"
-                                >
-                                  <TrashIcon />
-                                </button>
-
-                                <div className="grid gap-3 sm:grid-cols-[2fr,3fr]">
-                                  <div>
-                                    <label className="block text-[10px] font-bold uppercase text-slate-500">
-                                      Nume Participant
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={participant.name || ""}
-                                      onChange={(e) => {
-                                        const participants = [...(data.participants || [])];
-                                        participants[participantIndex] = {
-                                          ...(participants[participantIndex] || {}),
-                                          name: e.target.value
-                                        };
-                                        updateBlock(index, { data: { ...data, participants } });
-                                      }}
-                                      className="w-full border-b border-slate-300 bg-transparent py-1 text-sm font-semibold outline-none focus:border-rose-500"
-                                    />
-                                  </div>
-
-                                  <div>
-                                    <label className="block text-[10px] font-bold uppercase text-slate-500">
-                                      Fotografie
-                                    </label>
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      onChange={(e) =>
-                                        handleImageUpload(
-                                          e,
-                                          selectedSlug,
-                                          index,
-                                          `participants_grid.photo.${participantIndex}`
-                                        )
-                                      }
-                                      className="block w-full text-xs text-slate-700 file:mr-2 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-2 file:py-1 file:text-slate-700"
-                                    />
-                                    {participant.photoUrl && (
-                                      <div className="relative mt-2 aspect-square w-20 overflow-hidden rounded-full border border-slate-200 bg-slate-200/70">
-                                        <div
-                                          aria-hidden="true"
-                                          className="absolute inset-0 scale-110 bg-gradient-to-br from-slate-100 to-slate-300 blur-xl"
-                                        />
-                                        <img
-                                          src={withSupabaseImageParams(participant.photoUrl, {
-                                            width: 160,
-                                            quality: 80
-                                          })}
-                                          alt={participant.name || "Participant"}
-                                          width="160"
-                                          height="160"
-                                          loading="lazy"
-                                          decoding="async"
-                                          className="relative z-10 h-full w-full object-cover"
-                                        />
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {block.block_type === "gallery" && (
-                        <div className="space-y-3">
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-600">Titlu galerie</label>
-                            <input
-                              type="text"
-                              value={data.heading || ""}
-                              onChange={(e) => updateBlock(index, { data: { ...data, heading: e.target.value } })}
-                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-rose-300 focus:ring-2"
-                            />
-                          </div>
-
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                                Imagini
-                              </p>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const images = [...(data.images || [])];
-                                  images.push({ id: getUID(), url: "", alt: "" });
-                                  updateBlock(index, { data: { ...data, images } });
-                                }}
-                                className="rounded-full border border-slate-300 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-700 hover:bg-slate-100"
-                              >
-                                Adaugă imagine
-                              </button>
-                            </div>
-
-                            {(data.images || []).map((img, imgIndex) => (
-                              <div key={img.id || img.url || imgIndex} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                                <div className="mb-2 flex items-center justify-between">
-                                  <p className="text-xs font-semibold text-slate-600">Imagine #{imgIndex + 1}</p>
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      const images = [...(data.images || [])];
-                                      images.splice(imgIndex, 1);
-
-                                      const updatedBlocks = blocks.map((block, blockIndex) => {
-                                        if (blockIndex !== index) return block;
-                                        return { ...block, data: { ...block.data, images } };
-                                      });
-
-                                      // Cerință: actualizează întâi starea locală.
-                                      setBlocks(updatedBlocks);
-
-                                      setSavingPage(true);
-                                      setPageMessage("");
-                                      setPageMessageType("info");
-
-                                      try {
-                                        const updatedBlocksForSave = [updatedBlocks[index]];
-                                        await upsertBlocksToSupabase(updatedBlocksForSave);
-                                        setPageMessage("Pagina a fost actualizată după ștergere.");
-                                        setPageMessageType("success");
-                                      } catch (err) {
-                                        setPageMessage("A apărut o eroare la ștergerea imaginii.");
-                                        setPageMessageType("error");
-                                      } finally {
-                                        setSavingPage(false);
-                                      }
-                                    }}
-                                    className="text-xs text-red-600 hover:text-red-700"
-                                  >
-                                    Șterge
-                                  </button>
-                                </div>
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={(e) =>
-                                    handleImageUpload(e, selectedSlug, index, `gallery.image.${imgIndex}`)
-                                  }
-                                  className="block w-full text-xs text-slate-700 file:mr-2 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-2 file:py-1 file:text-slate-700"
-                                />
-                                {img.url && (
-                                  <div className="relative mt-2 aspect-[3/2] w-full overflow-hidden rounded-md border border-slate-200 bg-slate-200/70">
-                                    <div
-                                      aria-hidden="true"
-                                      className="absolute inset-0 scale-110 bg-gradient-to-br from-slate-100 to-slate-300 blur-xl"
-                                    />
-                                    <img
-                                      src={withSupabaseImageParams(img.url, { width: 640, quality: 80 })}
-                                      alt={img.alt || "Preview galerie"}
-                                      width="960"
-                                      height="640"
-                                      loading="lazy"
-                                      decoding="async"
-                                      className="relative z-10 h-full w-full object-cover"
-                                    />
-                                  </div>
-                                )}
-                                <div className="mt-2">
-                                  <label className="mb-1 block text-[11px] text-slate-600">Text alternativ</label>
-                                  <input
-                                    type="text"
-                                    value={img.alt || ""}
-                                    onChange={(e) => {
-                                      const images = [...(data.images || [])];
-                                      images[imgIndex] = {
-                                        ...(images[imgIndex] || {}),
-                                        alt: e.target.value
-                                      };
-                                      updateBlock(index, { data: { ...data, images } });
-                                    }}
-                                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs outline-none ring-rose-300 focus:ring-2"
-                                  />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {!blocks.length && (
-                  <p className="text-sm text-slate-300">
-                    Nu există încă blocuri pentru această pagină. Folosește butonul{" "}
-                    <span className="font-semibold text-white">Adaugă Bloc</span>.
-                  </p>
-                )}
-              </div>
-
-              {uploadError && <p className="text-xs text-red-300">{uploadError}</p>}
-
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                <button type="submit" className="btn-primary inline-flex min-w-44 items-center justify-center gap-2 px-8" disabled={savingPage}>
-                  {savingPage && (
-                    <span
-                      aria-hidden="true"
-                      className="h-4 w-4 animate-spin rounded-full border-2 border-slate-900 border-t-transparent"
-                    />
-                  )}
-                  {savingPage ? "Se publică..." : "Publică Pagina"}
-                </button>
-
-                {pageMessage && (
-                  <p
-                    className={[
-                      "rounded-md border px-3 py-1.5 text-xs",
-                      pageMessageType === "success" && "border-emerald-500/60 bg-emerald-950/40 text-emerald-200",
-                      pageMessageType === "error" && "border-red-500/60 bg-red-950/40 text-red-200",
-                      pageMessageType === "info" && "border-slate-600 bg-slate-900/60 text-slate-300"
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                  >
-                    {pageMessage}
-                  </p>
-                )}
-              </div>
-            </form>
-          )}
-        </section>
-      </div>
-    </main>
+      <main className="pt-8">
+        {/* Editorul rămâne montat: modificările nepublicate nu se pierd când treci pe alt tab. */}
+        <div hidden={tab !== "pagini"}>
+          <PageEditor />
+        </div>
+        {tab === "cereri" && <ContactRequestsPanel onChange={refreshCount} />}
+        {tab === "setari" && <SiteSettingsPanel />}
+      </main>
+    </div>
   );
 }
-

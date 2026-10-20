@@ -103,72 +103,83 @@ body {
 
 /*
   Mișcare legată de scroll fără lag: scroll-ul rămâne cel nativ (fără smooth-scroll în JS),
-  iar animațiile de mai jos le calculează browserul pe GPU, doar cu transform și opacity.
-  Browserele fără suport pentru animation-timeline primesc pagina statică.
+  iar animațiile se fac doar cu transform și opacity.
+  - Clasa .motion pe <html> o pune src/lib/scrollMotion.js, doar dacă utilizatorul nu a cerut mișcare redusă.
+  - Unde browserul știe animation-timeline (Chrome, Edge, Safari 26+), animațiile le calculează browserul pe GPU.
+  - Pe celelalte (iPhone-uri mai vechi, Firefox), același script le calculează o dată pe cadru (.motion-js).
 */
+.motion .manifest {
+  height: 260vh;
+  view-timeline: --manifest block;
+}
+
+.motion .manifest-stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+}
+
+.motion .manifest-photo {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  margin: 0;
+  translate: -50% 0;
+  transform: translate3d(0, 105%, 0);
+  will-change: transform;
+}
+
+.motion .parallax,
+.motion .drift {
+  will-change: transform;
+}
+
+.motion-js .reveal {
+  opacity: 0;
+}
+
 @supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .parallax {
-      animation: parallax linear both;
-      animation-timeline: scroll(root);
-      animation-range: 0 110vh;
-      will-change: transform;
-    }
+  .motion:not(.motion-js) .parallax {
+    animation: parallax linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 110vh;
+  }
 
-    /* Pentru elementele aflate mai jos în pagină: viteza se raportează la propria trecere prin ecran. */
-    .drift {
-      animation: drift linear both;
-      animation-timeline: view();
-      animation-range: cover 0% cover 100%;
-      will-change: transform;
-    }
+  /* Pentru elementele aflate mai jos în pagină: viteza se raportează la propria trecere prin ecran. */
+  .motion:not(.motion-js) .drift {
+    animation: drift linear both;
+    animation-timeline: view();
+    animation-range: cover 0% cover 100%;
+  }
 
-    .reveal {
-      animation: reveal linear both;
-      animation-timeline: view();
-      animation-range: entry 0% entry 70%;
-    }
+  .motion:not(.motion-js) .reveal {
+    animation: reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 70%;
+  }
 
-    .manifest {
-      height: 260vh;
-      view-timeline: --manifest block;
-    }
+  .motion:not(.motion-js) .manifest-night {
+    animation: fade-in linear both;
+    animation-timeline: --manifest;
+    animation-range: contain 0% contain 30%;
+  }
 
-    .manifest-stage {
-      position: sticky;
-      top: 0;
-      height: 100svh;
-    }
+  .motion:not(.motion-js) .manifest-photo {
+    animation: rise linear both;
+    animation-timeline: --manifest;
+    animation-range: contain 15% contain 65%;
+  }
 
-    .manifest-night {
-      animation: fade-in linear both;
-      animation-timeline: --manifest;
-      animation-range: contain 0% contain 30%;
-    }
+  .motion:not(.motion-js) .manifest-text {
+    animation: dim linear both;
+    animation-timeline: --manifest;
+    animation-range: contain 45% contain 80%;
+  }
 
-    .manifest-photo {
-      position: absolute;
-      left: 50%;
-      bottom: 0;
-      margin: 0;
-      translate: -50% 0;
-      animation: rise linear both;
-      animation-timeline: --manifest;
-      animation-range: contain 15% contain 65%;
-      will-change: transform;
-    }
-
-    .manifest-text {
-      animation: dim linear both;
-      animation-timeline: --manifest;
-      animation-range: contain 45% contain 80%;
-    }
-
-    .strip-progress {
-      animation: grow linear both;
-      animation-timeline: var(--strip);
-      transform-origin: left center;
-    }
+  .motion:not(.motion-js) .strip-progress {
+    animation: grow linear both;
+    animation-timeline: var(--strip);
+    transform-origin: left center;
   }
 }
 

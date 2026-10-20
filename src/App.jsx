@@ -20,7 +20,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-paper text-ink">
-      <Navbar />
+      {!isAdmin && <Navbar />}
 
       <Routes>
         <Route
@@ -100,7 +100,7 @@ export default function App() {
           element={
             <Suspense
               fallback={
-                <main className="min-h-screen bg-slate-950 px-4 pt-24 text-center text-sm text-slate-300">
+                <main className="min-h-screen bg-paper px-4 pt-24 text-center text-sm text-ink-soft">
                   Se încarcă panoul de administrare...
                 </main>
               }

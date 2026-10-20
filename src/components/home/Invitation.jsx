@@ -13,7 +13,7 @@ export function Invitation() {
       {left && (
         <div
           aria-hidden="true"
-          className="drift absolute -left-6 top-[18%] hidden w-[clamp(120px,14vw,240px)] overflow-hidden sm:block"
+          className="drift absolute -left-6 top-[6%] w-[26vw] overflow-hidden sm:top-[18%] sm:w-[clamp(120px,14vw,240px)]"
           style={{ "--shift": "-14vh", aspectRatio: "4 / 5" }}
         >
           <img src={withSupabaseImageParams(left.url, { width: 500 })} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
@@ -22,7 +22,7 @@ export function Invitation() {
       {right && (
         <div
           aria-hidden="true"
-          className="drift absolute -right-4 bottom-[10%] hidden w-[clamp(110px,12vw,210px)] overflow-hidden sm:block"
+          className="drift absolute -right-4 bottom-[4%] w-[24vw] overflow-hidden sm:bottom-[10%] sm:w-[clamp(110px,12vw,210px)]"
           style={{ "--shift": "-26vh", aspectRatio: "1 / 1" }}
         >
           <img src={withSupabaseImageParams(right.url, { width: 500 })} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />

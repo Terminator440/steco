@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { clearSiteSettingsCache } from "../lib/siteSettings";
+import { Notice, buttonClass, inputClass } from "./admin/ui";
 
 const EVENT_LABELS = {
   nunta: "Nuntă",
@@ -10,162 +11,206 @@ const EVENT_LABELS = {
   altul: "Alt eveniment"
 };
 
-const STATUS_OPTIONS = [
-  { value: "nou", label: "Nouă" },
-  { value: "in_lucru", label: "În lucru" },
-  { value: "finalizat", label: "Finalizată" }
-];
+const STATUS = {
+  nou: { label: "Nouă", badge: "bg-magenta text-cream" },
+  in_lucru: { label: "În lucru", badge: "bg-amber-100 text-amber-900" },
+  finalizat: { label: "Finalizată", badge: "bg-emerald-100 text-emerald-900" }
+};
 
-const inputClass =
-  "w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/30";
+const FILTERS = [
+  { id: "deschise", label: "De rezolvat" },
+  { id: "nou", label: "Noi" },
+  { id: "finalizat", label: "Finalizate" },
+  { id: "toate", label: "Toate" }
+];
 
 function formatDate(value, withTime = false) {
   if (!value) return "";
-  const date = new Date(value);
-  return date.toLocaleString("ro-RO", withTime ? { dateStyle: "medium", timeStyle: "short" } : { dateStyle: "medium" });
+  return new Date(value).toLocaleString("ro-RO", withTime ? { dateStyle: "medium", timeStyle: "short" } : { dateStyle: "long" });
 }
 
-export function ContactRequestsPanel() {
+function Panel({ title, intro, children }) {
+  return (
+    <section className="mx-auto max-w-[1200px] px-4 pb-24 sm:px-6">
+      <h1 className="display text-[2rem] leading-none">{title}</h1>
+      {intro && <p className="mt-2 max-w-[60ch] text-[0.9375rem] text-ink-soft">{intro}</p>}
+      <div className="mt-6">{children}</div>
+    </section>
+  );
+}
+
+export function ContactRequestsPanel({ onChange }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("deschise");
 
   useEffect(() => {
-    let isMounted = true;
-
+    let active = true;
     supabase
       .from("steco_contact_requests")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(200)
+      .limit(300)
       .then(({ data, error: loadError }) => {
-        if (!isMounted) return;
-        if (loadError) {
-          setError("Cererile nu s-au încărcat: " + loadError.message);
-        } else {
-          setRequests(data || []);
-        }
+        if (!active) return;
+        if (loadError) setError(`Cererile nu s-au încărcat: ${loadError.message}`);
+        else setRequests(data || []);
         setLoading(false);
       });
-
     return () => {
-      isMounted = false;
+      active = false;
     };
   }, []);
 
   async function changeStatus(id, status) {
     const previous = requests;
     setRequests((prev) => prev.map((req) => (req.id === id ? { ...req, status } : req)));
-
     const { error: updateError } = await supabase.from("steco_contact_requests").update({ status }).eq("id", id);
     if (updateError) {
       setRequests(previous);
-      setError("Statusul nu s-a salvat: " + updateError.message);
+      setError(`Statusul nu s-a salvat: ${updateError.message}`);
+      return;
     }
+    onChange?.();
   }
 
-  const visible = requests.filter((req) => (filter === "deschise" ? req.status !== "finalizat" : true));
-  const newCount = requests.filter((req) => req.status === "nou").length;
+  const visible = requests.filter((req) => {
+    if (filter === "deschise") return req.status !== "finalizat";
+    if (filter === "toate") return true;
+    return req.status === filter;
+  });
 
   return (
-    <section className="mx-auto max-w-6xl rounded-2xl border border-slate-800 bg-slate-900/80 p-5 sm:p-6">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-50">Cereri de ofertă</h2>
-          <p className="text-sm text-slate-400">
-            {newCount === 1 ? "O cerere nouă" : `${newCount} cereri noi`} din formularul de pe pagina Contact.
-          </p>
-        </div>
-        <select value={filter} onChange={(e) => setFilter(e.target.value)} className={`${inputClass} w-auto`}>
-          <option value="deschise">Doar cele nefinalizate</option>
-          <option value="toate">Toate cererile</option>
-        </select>
+    <Panel
+      title="Cereri de ofertă"
+      intro="Mesajele trimise din formularul de pe pagina Contact. Schimbă statusul ca să știi ce ai rezolvat."
+    >
+      <div className="mb-5 flex flex-wrap gap-2">
+        {FILTERS.map((f) => {
+          const n = requests.filter((req) =>
+            f.id === "deschise" ? req.status !== "finalizat" : f.id === "toate" ? true : req.status === f.id
+          ).length;
+          return (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setFilter(f.id)}
+              aria-pressed={filter === f.id}
+              className={[
+                "rounded-full border px-4 py-1.5 text-[0.875rem] transition-colors",
+                filter === f.id ? "border-plum bg-plum text-cream" : "border-line bg-white hover:border-ink/40"
+              ].join(" ")}
+            >
+              {f.label} <span className="opacity-70">({n})</span>
+            </button>
+          );
+        })}
       </div>
 
-      {error && <p className="mb-4 rounded-md border border-red-500/60 bg-red-950/40 px-3 py-2 text-sm text-red-200">{error}</p>}
+      {error && (
+        <div className="mb-4">
+          <Notice type="error" onClose={() => setError("")}>
+            {error}
+          </Notice>
+        </div>
+      )}
 
       {loading ? (
-        <p className="text-sm text-slate-300">Se încarcă cererile...</p>
+        <p className="text-ink-soft">Se încarcă cererile...</p>
       ) : !visible.length ? (
-        <p className="text-sm text-slate-300">
-          Nu există cereri {filter === "deschise" ? "nefinalizate" : ""}. Cele noi apar aici imediat ce un vizitator
-          trimite formularul.
+        <p className="rounded-2xl border border-dashed border-line bg-white px-5 py-10 text-center text-ink-soft">
+          {requests.length
+            ? "Nu există cereri în această listă."
+            : "Încă nu a trimis nimeni formularul. Cererile noi apar aici imediat."}
         </p>
       ) : (
-        <ul className="space-y-3">
+        <ul className="grid gap-3">
           {visible.map((req) => (
-            <li key={req.id} className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+            <li key={req.id} className="rounded-2xl border border-line bg-white p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-slate-50">
-                    {req.name}
-                    <span className="ml-2 text-sm font-normal text-slate-400">{EVENT_LABELS[req.event_type]}</span>
-                  </p>
-                  <p className="mt-1 text-sm text-slate-300">
-                    <a href={`mailto:${req.email}`} className="underline hover:text-rose-300">
-                      {req.email}
-                    </a>
-                    {req.phone && (
-                      <>
-                        {", "}
-                        <a href={`tel:${req.phone.replace(/\s+/g, "")}`} className="underline hover:text-rose-300">
-                          {req.phone}
-                        </a>
-                      </>
-                    )}
-                  </p>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-[1.0625rem] font-semibold">{req.name}</p>
+                    <span className={`rounded-full px-2.5 py-0.5 text-[0.75rem] font-semibold ${STATUS[req.status]?.badge}`}>
+                      {STATUS[req.status]?.label}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[0.8125rem] text-ink-soft">Primită {formatDate(req.created_at, true)}</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-slate-500">Primită {formatDate(req.created_at, true)}</span>
+                <label className="flex items-center gap-2 text-[0.875rem] text-ink-soft">
+                  Status
                   <select
                     value={req.status}
                     onChange={(e) => changeStatus(req.id, e.target.value)}
-                    aria-label={`Status pentru cererea lui ${req.name}`}
                     className={`${inputClass} w-auto py-1.5`}
                   >
-                    {STATUS_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
+                    {Object.entries(STATUS).map(([value, s]) => (
+                      <option key={value} value={value}>
+                        {s.label}
                       </option>
                     ))}
                   </select>
-                </div>
+                </label>
               </div>
 
-              <dl className="mt-3 grid gap-x-6 gap-y-1 text-sm text-slate-300 sm:grid-cols-3">
+              <dl className="mt-4 grid gap-x-8 gap-y-2 text-[0.9375rem] sm:grid-cols-2 lg:grid-cols-3">
+                <div>
+                  <dt className="text-[0.8125rem] text-ink-soft">Eveniment</dt>
+                  <dd>{EVENT_LABELS[req.event_type] || req.event_type}</dd>
+                </div>
                 {req.event_date && (
                   <div>
-                    <dt className="inline text-slate-500">Data: </dt>
-                    <dd className="inline">{formatDate(req.event_date)}</dd>
+                    <dt className="text-[0.8125rem] text-ink-soft">Data</dt>
+                    <dd>{formatDate(req.event_date)}</dd>
                   </div>
                 )}
                 {req.guests && (
                   <div>
-                    <dt className="inline text-slate-500">Invitați: </dt>
-                    <dd className="inline">{req.guests}</dd>
+                    <dt className="text-[0.8125rem] text-ink-soft">Invitați</dt>
+                    <dd>{req.guests}</dd>
                   </div>
                 )}
                 {req.location && (
                   <div>
-                    <dt className="inline text-slate-500">Locație: </dt>
-                    <dd className="inline">{req.location}</dd>
+                    <dt className="text-[0.8125rem] text-ink-soft">Locație</dt>
+                    <dd>{req.location}</dd>
+                  </div>
+                )}
+                <div>
+                  <dt className="text-[0.8125rem] text-ink-soft">Email</dt>
+                  <dd>
+                    <a href={`mailto:${req.email}`} className="break-all text-plum underline">
+                      {req.email}
+                    </a>
+                  </dd>
+                </div>
+                {req.phone && (
+                  <div>
+                    <dt className="text-[0.8125rem] text-ink-soft">Telefon</dt>
+                    <dd>
+                      <a href={`tel:${req.phone.replace(/\s+/g, "")}`} className="text-plum underline">
+                        {req.phone}
+                      </a>
+                    </dd>
                   </div>
                 )}
               </dl>
 
-              {req.message && <p className="mt-3 whitespace-pre-line text-sm text-slate-200">{req.message}</p>}
+              {req.message && (
+                <p className="mt-4 whitespace-pre-line rounded-xl bg-paper/70 px-4 py-3 text-[0.9375rem]">{req.message}</p>
+              )}
             </li>
           ))}
         </ul>
       )}
-    </section>
+    </Panel>
   );
 }
 
 const SETTINGS_FIELDS = [
-  { key: "phone", label: "Telefon", type: "tel", placeholder: "07xx xxx xxx" },
   { key: "email", label: "Email", type: "email", placeholder: "contact@exemplu.ro" },
+  { key: "phone", label: "Telefon", type: "tel", placeholder: "07xx xxx xxx" },
   { key: "address", label: "Adresă", type: "textarea", placeholder: "Oraș, stradă" },
   { key: "instagram_url", label: "Instagram", type: "url", placeholder: "https://instagram.com/..." },
   { key: "facebook_url", label: "Facebook", type: "url", placeholder: "https://facebook.com/..." },
@@ -175,7 +220,7 @@ const SETTINGS_FIELDS = [
 export function SiteSettingsPanel() {
   const [values, setValues] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState({ type: "", text: "" });
+  const [notice, setNotice] = useState(null);
 
   useEffect(() => {
     supabase
@@ -184,7 +229,7 @@ export function SiteSettingsPanel() {
       .eq("id", 1)
       .maybeSingle()
       .then(({ data, error }) => {
-        if (error) setMessage({ type: "error", text: "Setările nu s-au încărcat: " + error.message });
+        if (error) setNotice({ type: "error", text: `Datele nu s-au încărcat: ${error.message}` });
         setValues(data || {});
       });
   }, []);
@@ -192,80 +237,72 @@ export function SiteSettingsPanel() {
   async function handleSave(event) {
     event.preventDefault();
     setSaving(true);
-    setMessage({ type: "", text: "" });
+    setNotice(null);
 
-    const payload = Object.fromEntries(
-      SETTINGS_FIELDS.map(({ key }) => [key, (values[key] || "").trim() || null])
-    );
-
+    const payload = Object.fromEntries(SETTINGS_FIELDS.map(({ key }) => [key, (values[key] || "").trim() || null]));
     const { error } = await supabase.from("steco_site_settings").update(payload).eq("id", 1);
     setSaving(false);
 
     if (error) {
-      setMessage({
-        type: "error",
-        text: "Datele nu s-au salvat. Linkurile trebuie să înceapă cu https://. Detalii: " + error.message
-      });
+      setNotice({ type: "error", text: `Datele nu s-au salvat. Linkurile trebuie să înceapă cu https://. (${error.message})` });
       return;
     }
-
     clearSiteSettingsCache();
-    setMessage({ type: "success", text: "Datele de contact au fost salvate. Apar pe site la următoarea încărcare." });
-  }
-
-  if (!values) {
-    return (
-      <section className="mx-auto max-w-6xl rounded-2xl border border-slate-800 bg-slate-900/80 p-5 text-sm text-slate-300 sm:p-6">
-        Se încarcă datele de contact...
-      </section>
-    );
+    setNotice({ type: "success", text: "Am salvat datele de contact. Se văd pe site la următoarea deschidere a paginii." });
   }
 
   return (
-    <section className="mx-auto max-w-6xl rounded-2xl border border-slate-800 bg-slate-900/80 p-5 sm:p-6">
-      <h2 className="text-lg font-semibold text-slate-50">Date de contact</h2>
-      <p className="mb-5 text-sm text-slate-400">
-        Apar în subsolul site-ului și lângă formularul de contact. Câmpurile goale nu se afișează.
-      </p>
+    <Panel
+      title="Date de contact"
+      intro="Apar în subsolul site-ului, în meniu și lângă formularul de contact. Câmpurile goale nu apar pe site."
+    >
+      {!values ? (
+        <p className="text-ink-soft">Se încarcă...</p>
+      ) : (
+        <form onSubmit={handleSave} className="grid max-w-3xl gap-5 rounded-2xl border border-line bg-white p-5 sm:grid-cols-2 sm:p-6">
+          {SETTINGS_FIELDS.map((field) => (
+            <div key={field.key} className={field.type === "textarea" ? "sm:col-span-2" : ""}>
+              <label htmlFor={`setting-${field.key}`} className="mb-1.5 block text-[0.875rem] font-medium">
+                {field.label}
+              </label>
+              {field.type === "textarea" ? (
+                <textarea
+                  id={`setting-${field.key}`}
+                  rows={2}
+                  value={values[field.key] || ""}
+                  placeholder={field.placeholder}
+                  onChange={(e) => setValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                  className={inputClass}
+                />
+              ) : (
+                <input
+                  id={`setting-${field.key}`}
+                  type={field.type}
+                  value={values[field.key] || ""}
+                  placeholder={field.placeholder}
+                  pattern={field.type === "url" ? "https://.*" : undefined}
+                  onChange={(e) => setValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                  className={inputClass}
+                />
+              )}
+            </div>
+          ))}
 
-      <form onSubmit={handleSave} className="grid max-w-3xl gap-4 sm:grid-cols-2">
-        {SETTINGS_FIELDS.map((field) => (
-          <div key={field.key} className={field.type === "textarea" ? "sm:col-span-2" : ""}>
-            <label htmlFor={`setting-${field.key}`} className="mb-1.5 block text-xs font-medium text-slate-300">
-              {field.label}
-            </label>
-            {field.type === "textarea" ? (
-              <textarea
-                id={`setting-${field.key}`}
-                rows={2}
-                value={values[field.key] || ""}
-                placeholder={field.placeholder}
-                onChange={(e) => setValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                className={inputClass}
-              />
-            ) : (
-              <input
-                id={`setting-${field.key}`}
-                type={field.type}
-                value={values[field.key] || ""}
-                placeholder={field.placeholder}
-                pattern={field.type === "url" ? "https://.*" : undefined}
-                onChange={(e) => setValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                className={inputClass}
-              />
-            )}
-          </div>
-        ))}
-
-        <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-          <button type="submit" className="btn-primary" disabled={saving}>
-            {saving ? "Se salvează..." : "Salvează datele de contact"}
-          </button>
-          {message.text && (
-            <p className={message.type === "error" ? "text-sm text-red-300" : "text-sm text-emerald-300"}>{message.text}</p>
+          {notice && (
+            <div className="sm:col-span-2">
+              <Notice type={notice.type} onClose={() => setNotice(null)}>
+                {notice.text}
+              </Notice>
+            </div>
           )}
-        </div>
-      </form>
-    </section>
+
+          <div className="sm:col-span-2">
+            <button type="submit" className={buttonClass.primary} disabled={saving}>
+              {saving ? "Se salvează..." : "Salvează datele de contact"}
+            </button>
+          </div>
+        </form>
+      )}
+    </Panel>
   );
 }

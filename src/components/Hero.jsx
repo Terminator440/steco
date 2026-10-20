@@ -10,14 +10,14 @@ const HOME_SLOTS = [
   { cls: "left-[4%] bottom-[7%] w-[38vw] sm:bottom-auto sm:top-[58%] sm:w-[19vw] max-w-[340px]", ratio: "4 / 3", shift: "-48vh" },
   { cls: "right-0 bottom-[17%] w-[28vw] sm:bottom-auto sm:top-[47%] sm:w-[14vw] max-w-[250px]", ratio: "4 / 5", shift: "-26vh" },
   { cls: "left-[46%] -bottom-[6%] w-[30vw] sm:left-[44%] sm:-bottom-[9%] sm:w-[14vw] max-w-[250px]", ratio: "4 / 3", shift: "-62vh" },
-  { cls: "hidden sm:block left-[27%] top-[6%] sm:w-[9vw] max-w-[160px]", ratio: "3 / 4", shift: "-10vh" }
+  { cls: "left-[40%] top-[17%] w-[16vw] sm:left-[27%] sm:top-[6%] sm:w-[9vw] max-w-[160px]", ratio: "3 / 4", shift: "-10vh" }
 ];
 
 const PAGE_SLOTS = [
   { cls: "left-[2%] top-[10%] w-[20vw] sm:top-[16%] sm:w-[11vw] max-w-[190px]", ratio: "4 / 5", shift: "-22vh" },
   { cls: "right-[4%] top-[14%] w-[18vw] sm:top-[26%] sm:w-[12vw] max-w-[210px]", ratio: "1 / 1", shift: "-36vh" },
-  { cls: "hidden sm:block left-[12%] -bottom-[6%] sm:w-[13vw] max-w-[230px]", ratio: "4 / 3", shift: "-14vh" },
-  { cls: "hidden sm:block right-[18%] -bottom-[10%] sm:w-[9vw] max-w-[160px]", ratio: "3 / 4", shift: "-44vh" }
+  { cls: "left-[6%] -bottom-[4%] w-[24vw] sm:left-[12%] sm:-bottom-[6%] sm:w-[13vw] max-w-[230px]", ratio: "4 / 3", shift: "-14vh" },
+  { cls: "right-[10%] -bottom-[8%] w-[16vw] sm:right-[18%] sm:-bottom-[10%] sm:w-[9vw] max-w-[160px]", ratio: "3 / 4", shift: "-44vh" }
 ];
 
 function Collage({ images, slots, eager = false }) {
