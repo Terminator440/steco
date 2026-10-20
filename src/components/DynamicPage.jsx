@@ -18,134 +18,53 @@ const ParticipantsGridBlock = lazy(() =>
   import("./blocks/ParticipantsGridBlock").then((module) => ({ default: module.ParticipantsGridBlock }))
 );
 
-function HeroBlock({ data, fallbackTitle, fallbackSubtitle, slug, blockType }) {
+const LAZY_BLOCKS = {
+  text_photo: TextPhotoBlock,
+  services_grid: ServicesGridBlock,
+  gallery: GalleryBlock,
+  text_section: TextSectionBlock,
+  participants_grid: ParticipantsGridBlock
+};
+
+function HeroBlock({ data, defaults, slug }) {
   return (
     <Hero
-      title={data?.title || fallbackTitle}
-      subtitle={data?.subtitle || fallbackSubtitle}
+      title={data?.title || defaults.title}
+      subtitle={data?.subtitle || defaults.subtitle}
       imageUrl={data?.backgroundImageUrl}
       ctaLabel={data?.buttonLabel}
       ctaHref={data?.buttonHref}
-      blockType={blockType || slug || "hero"}
+      variant={slug === "home" ? "feature" : "page"}
     />
   );
 }
 
 function BlockFallback() {
-  return (
-    <section className="mx-auto max-w-6xl px-4 pb-10 sm:px-6 lg:px-8">
-      <div className="glass-panel rounded-2xl p-4 text-xs text-slate-300">Se încarcă secțiunea...</div>
-    </section>
-  );
-}
-
-function DefaultContent({ defaults, slug }) {
-  return (
-    <>
-      <HeroBlock
-        data={null}
-        fallbackTitle={defaults.title}
-        fallbackSubtitle={defaults.subtitle}
-        slug={slug}
-        blockType={slug}
-      />
-      <section className="mx-auto max-w-3xl px-4 pb-16 sm:px-6 lg:px-8">
-        <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-4 text-center">
-          <p className="text-sm text-slate-300 sm:text-base">
-            Nu există încă secțiuni definite pentru această pagină.
-          </p>
-          <p className="text-xs text-slate-400 sm:text-sm">
-            Dacă ești administrator, poți construi prima secțiune din panoul{" "}
-            <span className="font-semibold text-rose-400">Admin</span>.
-          </p>
-          <div className="flex justify-center">
-            <a
-              href="/admin"
-              className="inline-flex items-center justify-center rounded-full border border-rose-500 px-5 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-rose-100 hover:bg-rose-500/10"
-            >
-              Construiește prima secțiune
-            </a>
-          </div>
-        </div>
-      </section>
-    </>
-  );
+  return <div className="min-h-[40vh]" aria-hidden="true" />;
 }
 
 function BlockManager({ blocks, defaults, slug }) {
-  if (!blocks || !blocks.length) {
-    return <DefaultContent defaults={defaults} slug={slug} />;
-  }
-
-  // eslint-disable-next-line no-console
-  console.log(`[Steco] BlockManager primește blocuri pentru slug "${slug}":`, blocks);
+  const hasHero = blocks.some((block) => block.block_type === "hero");
 
   return (
     <>
+      {!hasHero && <HeroBlock data={null} defaults={defaults} slug={slug} />}
+
       {blocks.map((block) => {
         const key = block.id || `${block.block_type}-${block.order_index}`;
 
         if (block.block_type === "hero") {
-          return (
-            <HeroBlock
-              key={key}
-              data={block.data}
-              fallbackTitle={defaults.title}
-              fallbackSubtitle={defaults.subtitle}
-              slug={slug}
-              blockType={block.block_type}
-            />
-          );
+          return <HeroBlock key={key} data={block.data} defaults={defaults} slug={slug} />;
         }
 
-        if (block.block_type === "text_photo") {
-          return (
-            <Suspense key={key} fallback={<BlockFallback />}>
-              <TextPhotoBlock data={block.data} />
-            </Suspense>
-          );
-        }
+        const Block = LAZY_BLOCKS[block.block_type];
+        if (!Block) return null;
 
-        if (block.block_type === "services_grid") {
-          // eslint-disable-next-line no-console
-          console.log("[Steco] Date primite pentru bloc services_grid:", block);
-
-          if (!block.data || !block.data.items) {
-            return null;
-          }
-
-          return (
-            <Suspense key={key} fallback={<BlockFallback />}>
-              <ServicesGridBlock data={block.data} />
-            </Suspense>
-          );
-        }
-
-        if (block.block_type === "gallery") {
-          return (
-            <Suspense key={key} fallback={<BlockFallback />}>
-              <GalleryBlock data={block.data} />
-            </Suspense>
-          );
-        }
-
-        if (block.block_type === "text_section") {
-          return (
-            <Suspense key={key} fallback={<BlockFallback />}>
-              <TextSectionBlock data={block.data} />
-            </Suspense>
-          );
-        }
-
-        if (block.block_type === "participants_grid") {
-          return (
-            <Suspense key={key} fallback={<BlockFallback />}>
-              <ParticipantsGridBlock data={block.data} />
-            </Suspense>
-          );
-        }
-
-        return null;
+        return (
+          <Suspense key={key} fallback={<BlockFallback />}>
+            <Block data={block.data} />
+          </Suspense>
+        );
       })}
     </>
   );
@@ -163,7 +82,7 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
 
       try {
         if (!supabase) {
-          setLoading(false);
+          setBlocks([]);
           return;
         }
 
@@ -181,21 +100,23 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
           return;
         }
 
-        const mapped = (data || []).map((row) => ({
-          id: row.id,
-          page_slug: row.page_slug,
-          block_type: row.block_type,
-          order_index: row.order_index ?? 0,
-          data: row.content_json || row.block_data || {}
-        }));
+        if (!data?.length) {
+          console.warn(`[Steco] Nu există blocuri pentru pagina "${slug}" în steco_page_blocks.`);
+        }
 
-        // eslint-disable-next-line no-console
-        console.log(`[Steco] Blocuri încărcate pentru slug "${slug}":`, mapped);
-
-        setBlocks(mapped);
+        setBlocks(
+          (data || []).map((row) => ({
+            id: row.id,
+            page_slug: row.page_slug,
+            block_type: row.block_type,
+            order_index: row.order_index ?? 0,
+            data: row.content_json || row.block_data || {}
+          }))
+        );
       } catch (err) {
         console.error("[Steco] Eroare neașteptată la încărcarea blocurilor:", err);
-        // Lăsăm blocurile goale și afișăm conținutul implicit
+        // Vizitatorul vede pagina cu textele implicite, nu mesajul de eroare.
+        if (isMounted) setBlocks([]);
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -211,35 +132,12 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
   }, [slug]);
 
   return (
-    <main className="min-h-screen bg-black">
-      {loading && (
-        <div className="mx-auto max-w-3xl px-4 pt-24 sm:px-6 lg:px-8">
-          <p className="text-xs text-slate-400">
-            Se încarcă blocurile pentru pagina <code className="font-mono">{slug}</code>...
-          </p>
-        </div>
-      )}
-
-      {!loading && (!blocks || !blocks.length) ? (
-        <section className="mx-auto max-w-3xl px-4 pt-24 pb-16 sm:px-6 lg:px-8">
-          <div className="glass-panel rounded-3xl p-6 text-center">
-            <p className="text-lg font-semibold text-red-300">
-              Eroare: Nu s-au găsit date pentru slug-ul "{slug}" în Supabase.
-            </p>
-            <p className="mt-2 text-sm text-slate-400">
-              Verifică în tabela <code className="font-mono">steco_page_blocks</code> că există rânduri cu{" "}
-              <code className="font-mono">page_slug = "{slug}"</code>.
-            </p>
-          </div>
-        </section>
+    <main className="min-h-screen">
+      {loading ? (
+        <div className="min-h-[100svh]" aria-busy="true" aria-label="Se încarcă pagina" />
       ) : (
-        <BlockManager
-          blocks={blocks}
-          defaults={{ title: defaultTitle, subtitle: defaultSubtitle }}
-          slug={slug}
-        />
+        <BlockManager blocks={blocks} defaults={{ title: defaultTitle, subtitle: defaultSubtitle }} slug={slug} />
       )}
     </main>
   );
 }
-

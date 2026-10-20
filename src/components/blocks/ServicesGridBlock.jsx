@@ -1,34 +1,29 @@
 export function ServicesGridBlock({ data }) {
-  const items = data?.items || [];
-
-  if (!data || !Array.isArray(items)) {
-    return (
-      <section className="mx-auto max-w-6xl px-4 pb-16 pt-24 sm:px-6 lg:px-8">
-        <div className="glass-panel rounded-2xl p-4 text-center text-sm text-slate-300">
-          Încarcare servicii...
-        </div>
-      </section>
-    );
-  }
+  const items = Array.isArray(data?.items) ? data.items.filter((item) => item?.title || item?.description) : [];
 
   if (!items.length) return null;
 
+  // Ca programul unei seri: numele serviciului în stânga axei, detaliile în dreapta.
   return (
-    <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
-      <div className="mb-6 text-center">
-        <h2 className="font-display text-2xl text-slate-50 sm:text-3xl">
-          {data.heading || "Serviciile noastre"}
-        </h2>
-      </div>
+    <section className="py-16 sm:py-24">
+      <div className="mx-auto max-w-7xl px-4 sm:px-8">
+        <h2 className="type-h2 mb-10 sm:mb-14">{data.heading || "Serviciile noastre"}</h2>
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {items.map((item, idx) => (
-          <div key={item.id || idx} className="glass-panel flex h-full flex-col rounded-2xl p-5 text-center">
-            {/* Icon-urile au fost eliminate pentru a evita upload/randări nedorite */}
-            <h3 className="font-semibold text-slate-50">{item.title}</h3>
-            <p className="mt-2 text-xs text-slate-300 sm:text-sm">{item.description}</p>
-          </div>
-        ))}
+        <ul className="border-b border-line">
+          {items.map((item, idx) => (
+            <li
+              key={item.id || idx}
+              className="grid gap-3 border-t border-line py-8 sm:py-10 lg:grid-cols-2 lg:gap-0"
+            >
+              <h3 className="type-h3 lg:pr-16">{item.title}</h3>
+              {item.description && (
+                <p className="max-w-[56ch] text-ink-soft lg:border-l lg:border-line lg:pl-16" style={{ whiteSpace: "pre-line" }}>
+                  {item.description}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );

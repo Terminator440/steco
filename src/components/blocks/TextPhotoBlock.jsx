@@ -1,44 +1,35 @@
 import { withSupabaseImageParams } from "../../lib/imageUtils";
+import { Paragraphs } from "./Paragraphs";
+
+const FALLBACK_IMAGE =
+  "https://images.pexels.com/photos/265947/pexels-photo-265947.jpeg?auto=compress&cs=tinysrgb&w=1200";
 
 export function TextPhotoBlock({ data }) {
   if (!data?.text && !data?.imageUrl) return null;
 
   const imageOnLeft = data?.imagePosition === "left";
-  const imageUrl = withSupabaseImageParams(data?.imageUrl, { width: 960, quality: 80 });
+  const imageUrl = withSupabaseImageParams(data?.imageUrl, { width: 1100, quality: 80 });
 
   return (
-    <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
-      <div className="grid items-center gap-8 lg:grid-cols-2">
-        <div className={imageOnLeft ? "order-2 lg:order-2" : "order-2 lg:order-1"}>
-          <div className="glass-panel rounded-3xl p-6 sm:p-8">
-            {data.title && (
-              <h2 className="mb-3 font-display text-2xl text-slate-50 sm:text-3xl">
-                {data.title}
-              </h2>
-            )}
-            <p className="text-sm text-slate-200 sm:text-base" style={{ whiteSpace: "pre-line" }}>
-              {data.text}
-            </p>
-          </div>
+    <section className="py-16 sm:py-24">
+      <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 sm:px-8 lg:grid-cols-2 lg:gap-0">
+        <div className="axis-line hidden lg:block" />
+
+        <div className={imageOnLeft ? "lg:order-2 lg:pl-20" : "lg:pr-20"}>
+          {data.title && <h2 className="type-h2 mb-6 max-w-[18ch]">{data.title}</h2>}
+          <Paragraphs text={data.text} className="max-w-[60ch] space-y-4 text-ink-soft" />
         </div>
 
-        <div className={imageOnLeft ? "order-1 lg:order-1" : "order-1 lg:order-2"}>
-          <div className="relative aspect-[3/2] overflow-hidden rounded-3xl border border-slate-700 bg-slate-200/70">
-            <div
-              aria-hidden="true"
-              className="absolute inset-0 scale-110 bg-gradient-to-br from-slate-100 to-slate-300 blur-xl"
-            />
+        <div className={imageOnLeft ? "lg:order-1 lg:pr-20" : "lg:pl-20"}>
+          <div className="aspect-[4/5] overflow-hidden bg-blush sm:aspect-[3/2] lg:aspect-[4/5]">
             <img
-              src={
-                imageUrl ||
-                "https://images.pexels.com/photos/265947/pexels-photo-265947.jpeg?auto=compress&cs=tinysrgb&w=1200"
-              }
-              alt={data.imageAlt || "Text și foto Steco"}
+              src={imageUrl || FALLBACK_IMAGE}
+              alt={data.imageAlt || ""}
               width="1200"
-              height="800"
+              height="1500"
               loading="lazy"
               decoding="async"
-              className="relative z-10 h-full w-full object-cover"
+              className="h-full w-full object-cover"
             />
           </div>
         </div>

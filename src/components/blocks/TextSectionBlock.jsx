@@ -1,16 +1,28 @@
-export function TextSectionBlock({ data }) {
-  const text = data?.text || "";
+import { splitParagraphs } from "./Paragraphs";
 
-  if (!text) return null;
+export function TextSectionBlock({ data }) {
+  const [lede, ...rest] = splitParagraphs(data?.text);
+
+  if (!lede) return null;
 
   return (
-    <section className="mx-auto max-w-4xl px-4 pb-16 pt-24 sm:px-6 lg:px-8">
-      <div className="rounded-3xl border border-slate-800/70 bg-slate-950/80 p-6 sm:p-10 shadow-elegant">
-        <div className="text-sm leading-relaxed text-slate-200 sm:text-base" style={{ whiteSpace: "pre-line" }}>
-          {text}
+    <section className="py-16 sm:py-24">
+      <div className="mx-auto max-w-7xl px-4 sm:px-8">
+        <div className="mx-auto max-w-[66ch]">
+          <p className="font-display text-[1.625rem] leading-[1.45] text-ink sm:text-[1.875rem]" style={{ whiteSpace: "pre-line" }}>
+            {lede}
+          </p>
+          {rest.length > 0 && (
+            <div className="mt-10 space-y-5 text-[1.125rem] leading-[1.7] text-ink-soft">
+              {rest.map((paragraph, idx) => (
+                <p key={idx} style={{ whiteSpace: "pre-line" }}>
+                  {paragraph}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </section>
   );
 }
-

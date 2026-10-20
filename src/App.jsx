@@ -1,15 +1,19 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { Navbar } from "./components/Navbar";
 import { DynamicPage } from "./components/DynamicPage";
+import { Footer } from "./components/Footer";
 
 const AdminPage = lazy(() =>
   import("./pages/AdminPage").then((module) => ({ default: module.AdminPage }))
 );
 
 export default function App() {
+  const { pathname } = useLocation();
+  const isAdmin = pathname.startsWith("/admin");
+
   return (
-    <div className="min-h-screen bg-black text-slate-50">
+    <div className="min-h-screen bg-paper text-ink">
       <Navbar />
 
       <Routes>
@@ -90,7 +94,7 @@ export default function App() {
           element={
             <Suspense
               fallback={
-                <main className="min-h-screen bg-black px-4 pt-24 text-center text-sm text-slate-300">
+                <main className="min-h-screen bg-slate-950 px-4 pt-24 text-center text-sm text-slate-300">
                   Se încarcă panoul de administrare...
                 </main>
               }
@@ -100,6 +104,8 @@ export default function App() {
           }
         />
       </Routes>
+
+      {!isAdmin && <Footer />}
     </div>
   );
 }
