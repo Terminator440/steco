@@ -1,8 +1,6 @@
 import { withSupabaseImageParams } from "../../lib/imageUtils";
+import { withoutEmoji } from "../../lib/text";
 import { Paragraphs } from "./Paragraphs";
-
-const FALLBACK_IMAGE =
-  "https://images.pexels.com/photos/265947/pexels-photo-265947.jpeg?auto=compress&cs=tinysrgb&w=1200";
 
 export function TextPhotoBlock({ data }) {
   if (!data?.text && !data?.imageUrl) return null;
@@ -11,28 +9,28 @@ export function TextPhotoBlock({ data }) {
   const imageUrl = withSupabaseImageParams(data?.imageUrl, { width: 1100, quality: 80 });
 
   return (
-    <section className="py-16 sm:py-24">
-      <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 sm:px-8 lg:grid-cols-2 lg:gap-0">
-        <div className="axis-line hidden lg:block" />
-
-        <div className={imageOnLeft ? "lg:order-2 lg:pl-20" : "lg:pr-20"}>
-          {data.title && <h2 className="type-h2 mb-6 max-w-[18ch]">{data.title}</h2>}
-          <Paragraphs text={data.text} className="max-w-[60ch] space-y-4 text-ink-soft" />
+    <section data-header="light" className="overflow-hidden bg-paper px-4 py-24 sm:px-8 sm:py-32">
+      <div className="mx-auto grid max-w-[1400px] items-center gap-12 lg:grid-cols-2 lg:gap-20">
+        <div className={imageOnLeft ? "lg:order-2" : ""}>
+          {data.title && <h2 className="display display-md reveal max-w-[16ch]">{withoutEmoji(data.title)}</h2>}
+          <Paragraphs text={data.text} className="reveal mt-8 max-w-[52ch] space-y-4 text-lg text-ink-soft" />
         </div>
 
-        <div className={imageOnLeft ? "lg:order-1 lg:pr-20" : "lg:pl-20"}>
-          <div className="aspect-[4/5] overflow-hidden bg-blush sm:aspect-[3/2] lg:aspect-[4/5]">
-            <img
-              src={imageUrl || FALLBACK_IMAGE}
-              alt={data.imageAlt || ""}
-              width="1200"
-              height="1500"
-              loading="lazy"
-              decoding="async"
-              className="h-full w-full object-cover"
-            />
+        {imageUrl && (
+          <div className={imageOnLeft ? "lg:order-1" : ""}>
+            <div className="drift mx-auto aspect-[4/5] max-w-[520px] overflow-hidden bg-blush" style={{ "--shift": "-10vh" }}>
+              <img
+                src={imageUrl}
+                alt={data.imageAlt || ""}
+                width="1100"
+                height="1375"
+                loading="lazy"
+                decoding="async"
+                className="h-full w-full object-cover"
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </section>
   );

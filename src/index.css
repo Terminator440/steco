@@ -1,27 +1,24 @@
 @import "tailwindcss";
 
 @theme {
-  /* Paleta vine din logo: cerneală prună și magenta pe hârtie. */
-  --color-paper: #fbf8f9;
-  --color-blush: #f3e8ee;
+  /* Prună și magenta din logo, pe fundaluri închise ca într-o sală de seară. */
+  --color-plum: #3d1537;
+  --color-night: #1d1230;
+  --color-cream: #f6ecef;
+  --color-paper: #eee7e5;
+  --color-blush: #e2d6d8;
   --color-ink: #2a1430;
   --color-ink-soft: #6a5670;
-  --color-magenta: #b3125c;
+  --color-line: #d4c7cb;
+  --color-magenta: #c2246c;
   --color-magenta-deep: #8c0c47;
-  --color-line: #e4d6de;
 
   /* Păstrate pentru panoul de administrare. */
   --color-steco-gold: #f5c56a;
   --color-steco-navy: #0b1b2b;
 
-  --font-sans: "Jost", system-ui, sans-serif;
-  --font-display: "Bodoni Moda", "Didot", Georgia, serif;
-
-  --shadow-elegant: 0 18px 45px rgba(42, 20, 48, 0.18);
-}
-
-html {
-  scroll-behavior: smooth;
+  --font-sans: "Hanken Grotesk", system-ui, sans-serif;
+  --font-display: "Marcellus", "Trajan Pro", Georgia, serif;
 }
 
 body {
@@ -32,7 +29,7 @@ body {
 
 ::selection {
   background: var(--color-magenta);
-  color: var(--color-paper);
+  color: var(--color-cream);
 }
 
 :focus-visible {
@@ -40,126 +37,224 @@ body {
   outline-offset: 3px;
 }
 
-.font-display {
-  font-optical-sizing: auto;
-  font-feature-settings: "lnum";
-}
-
-/* Scara tipografică: 15 / 17 / 22 / 28 / 40 / 56–80 */
-.type-h1 {
-  @apply font-display text-ink;
-  font-size: clamp(2.6rem, 5.4vw, 5rem);
-  line-height: 1.03;
-  letter-spacing: -0.015em;
+/* Titlurile în majuscule clasice, ca „STECO” din logo. */
+.display {
+  font-family: var(--font-display);
   font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
 }
 
-.type-h2 {
-  @apply font-display text-ink;
-  font-size: clamp(2rem, 3.4vw, 2.5rem);
-  line-height: 1.1;
-  letter-spacing: -0.01em;
-  font-weight: 400;
+.display-xl {
+  font-size: clamp(2.9rem, 8.4vw, 9rem);
+  line-height: 0.94;
 }
 
-.type-h3 {
-  @apply font-display text-ink;
-  font-size: 1.75rem;
-  line-height: 1.2;
-  font-weight: 400;
+.display-lg {
+  font-size: clamp(2.3rem, 5.6vw, 5.75rem);
+  line-height: 0.98;
 }
 
-.type-lede {
-  font-size: 1.375rem;
-  line-height: 1.5;
+.display-md {
+  font-size: clamp(1.75rem, 3.3vw, 3.25rem);
+  line-height: 1.08;
+}
+
+.display-sm {
+  font-size: clamp(1.4rem, 2vw, 1.875rem);
+  line-height: 1.12;
+}
+
+/* Linkul principal: text între două puncte magenta. */
+.link-dots {
+  @apply inline-flex items-center gap-3 text-[0.9375rem] font-medium tracking-[0.02em] transition-opacity hover:opacity-75;
+}
+
+.link-dots::before,
+.link-dots::after {
+  content: "";
+  @apply block h-1.5 w-1.5 rounded-full bg-magenta;
+}
+
+.btn-round {
+  @apply inline-flex h-36 w-36 items-center justify-center rounded-full border text-center text-[0.9375rem] font-medium leading-tight transition-colors duration-300;
+  border-color: color-mix(in srgb, currentColor 40%, transparent);
+}
+
+.btn-round:hover {
+  background: var(--color-magenta);
+  border-color: var(--color-magenta);
+  color: var(--color-cream);
 }
 
 .btn-primary {
-  @apply inline-flex items-center justify-center rounded-[3px] px-6 py-3 text-[0.9375rem] font-medium
-    bg-magenta text-paper hover:bg-magenta-deep transition-colors duration-200
+  @apply inline-flex items-center justify-center rounded-full px-6 py-3 text-[0.9375rem] font-medium
+    bg-magenta text-cream hover:bg-magenta-deep transition-colors duration-200
     disabled:opacity-60;
-  letter-spacing: 0.02em;
 }
 
-.btn-outline {
-  @apply inline-flex items-center justify-center rounded-[3px] px-6 py-3 text-[0.9375rem] font-medium
-    border border-ink/25 text-ink hover:border-ink transition-colors duration-200;
-  letter-spacing: 0.02em;
+.no-scrollbar {
+  scrollbar-width: none;
 }
 
-/* Linia verticală din monogramă: axa care desparte titlul de detalii. */
-.axis-line {
-  @apply pointer-events-none absolute inset-y-0 left-1/2 w-px bg-line;
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
-/* Singurul moment animat: crenguța care se desenează pe axă. */
-.branch-draw path,
-.branch-draw circle {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: branch-draw 1.6s cubic-bezier(0.55, 0, 0.25, 1) forwards;
-  animation-delay: var(--d, 0s);
-}
+/*
+  Mișcare legată de scroll fără lag: scroll-ul rămâne cel nativ (fără smooth-scroll în JS),
+  iar animațiile de mai jos le calculează browserul pe GPU, doar cu transform și opacity.
+  Browserele fără suport pentru animation-timeline primesc pagina statică.
+*/
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .parallax {
+      animation: parallax linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 110vh;
+      will-change: transform;
+    }
 
-.branch-draw circle {
-  stroke-dashoffset: 0;
-  opacity: 0;
-  animation-name: branch-dot;
-  animation-duration: 0.5s;
-}
+    /* Pentru elementele aflate mai jos în pagină: viteza se raportează la propria trecere prin ecran. */
+    .drift {
+      animation: drift linear both;
+      animation-timeline: view();
+      animation-range: cover 0% cover 100%;
+      will-change: transform;
+    }
 
-.hero-rise {
-  opacity: 0;
-  transform: translateY(12px);
-  animation: hero-rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
-  animation-delay: var(--d, 0s);
-}
+    .reveal {
+      animation: reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+    }
 
-@keyframes branch-draw {
-  to {
-    stroke-dashoffset: 0;
+    .manifest {
+      height: 260vh;
+      view-timeline: --manifest block;
+    }
+
+    .manifest-stage {
+      position: sticky;
+      top: 0;
+      height: 100svh;
+    }
+
+    .manifest-night {
+      animation: fade-in linear both;
+      animation-timeline: --manifest;
+      animation-range: contain 0% contain 30%;
+    }
+
+    .manifest-photo {
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      margin: 0;
+      translate: -50% 0;
+      animation: rise linear both;
+      animation-timeline: --manifest;
+      animation-range: contain 15% contain 65%;
+      will-change: transform;
+    }
+
+    .manifest-text {
+      animation: dim linear both;
+      animation-timeline: --manifest;
+      animation-range: contain 45% contain 80%;
+    }
+
+    .strip-progress {
+      animation: grow linear both;
+      animation-timeline: var(--strip);
+      transform-origin: left center;
+    }
   }
 }
 
-@keyframes branch-dot {
+@keyframes parallax {
   to {
-    opacity: 1;
+    transform: translate3d(0, var(--shift, -18vh), 0);
   }
 }
 
-@keyframes hero-rise {
+@keyframes drift {
+  from {
+    transform: translate3d(0, calc(var(--shift, -18vh) * -0.5), 0);
+  }
+  to {
+    transform: translate3d(0, calc(var(--shift, -18vh) * 0.5), 0);
+  }
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 2.5rem, 0);
+  }
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes rise {
+  from {
+    transform: translate3d(0, 105%, 0);
+  }
+  to {
+    transform: translate3d(0, -12svh, 0);
+  }
+}
+
+@keyframes dim {
+  to {
+    opacity: 0.35;
+  }
+}
+
+@keyframes grow {
+  from {
+    transform: scaleX(0.08);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Intrarea paginii: un singur moment, la încărcare. */
+.page-in {
+  animation: page-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: var(--d, 0s);
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 1.5rem, 0);
   }
 }
 
 .lightbox::backdrop {
-  background: rgba(42, 20, 48, 0.92);
+  background: rgba(29, 18, 48, 0.94);
 }
 
 .lightbox[open] {
-  animation: lightbox-in 0.25s ease-out;
-}
-
-@keyframes lightbox-in {
-  from {
-    opacity: 0;
-  }
+  animation: fade-in 0.25s ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-
-  .branch-draw path,
-  .branch-draw circle,
-  .hero-rise,
+  .page-in,
   .lightbox[open] {
     animation: none;
-    stroke-dashoffset: 0;
-    opacity: 1;
-    transform: none;
   }
 }

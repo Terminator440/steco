@@ -1,64 +1,92 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Wordmark } from "./Brand";
+import { useSiteSettings } from "../lib/siteSettings";
 
 export const navItems = [
   { to: "/servicii", label: "Servicii" },
   { to: "/portofoliu", label: "Portofoliu" },
-  { to: "/misiunea-noastra", label: "Misiunea noastră" },
+  { to: "/misiunea-noastra", label: "Despre noi" },
   { to: "/participanti", label: "Participanți" },
   { to: "/contact", label: "Contact" }
 ];
 
+// Antetul e transparent: își schimbă culoarea după secțiunea de sub el (data-header="dark" | "light").
+function useHeaderTheme(pathname) {
+  const [theme, setTheme] = useState("dark");
+
+  useEffect(() => {
+    let frame = 0;
+
+    const check = () => {
+      frame = 0;
+      const stack = document.elementsFromPoint(window.innerWidth / 2, 36);
+      const section = stack.map((el) => el.closest("[data-header]")).find(Boolean);
+      setTheme(section?.getAttribute("data-header") || "light");
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(check);
+    };
+
+    schedule();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+
+    // Conținutul vine din Supabase după navigare, așa că verificăm și când apar secțiunile.
+    const main = document.querySelector("#root");
+    const observer = new MutationObserver(schedule);
+    if (main) observer.observe(main, { childList: true, subtree: true });
+
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+      observer.disconnect();
+    };
+  }, [pathname]);
+
+  return theme;
+}
+
 export function Navbar() {
   const [open, setOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
-  const solid = scrolled || open || location.pathname.startsWith("/admin");
+  const settings = useSiteSettings();
+  const isAdmin = location.pathname.startsWith("/admin");
+  const sectionTheme = useHeaderTheme(location.pathname);
+  const theme = open || isAdmin ? "dark" : sectionTheme;
 
   useEffect(() => {
     setOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
+    if (!open) return undefined;
+    document.body.style.overflow = "hidden";
+    const onKey = (event) => event.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
     };
   }, [open]);
 
   return (
-    <header
-      className={[
-        "fixed inset-x-0 top-0 z-40 border-b transition-colors duration-300",
-        solid ? "border-line bg-paper/90 backdrop-blur-md" : "border-transparent bg-paper/0"
-      ].join(" ")}
-    >
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-8">
-        <Link to="/" aria-label="Steco Events, pagina principală">
-          <Wordmark />
-        </Link>
-
-        <div className="hidden items-center gap-8 lg:flex">
-          <ul className="flex items-center gap-7 text-[0.9375rem]">
-            {navItems.map((item) => (
+    <>
+      <header
+        className={[
+          "fixed inset-x-0 top-0 z-50 transition-colors duration-300",
+          theme === "dark" ? "text-cream" : "text-ink",
+          isAdmin ? "bg-night" : ""
+        ].join(" ")}
+      >
+        <nav className="mx-auto grid max-w-[1600px] grid-cols-[1fr_auto_1fr] items-center px-4 py-5 sm:px-8">
+          <ul className="hidden items-center gap-7 text-[0.9375rem] lg:flex">
+            {navItems.slice(0, 3).map((item) => (
               <li key={item.to}>
                 <NavLink
                   to={item.to}
                   className={({ isActive }) =>
-                    [
-                      "border-b py-1 transition-colors",
-                      isActive
-                        ? "border-magenta text-ink"
-                        : "border-transparent text-ink-soft hover:text-ink"
-                    ].join(" ")
+                    ["transition-opacity hover:opacity-100", isActive ? "opacity-100" : "opacity-75"].join(" ")
                   }
                 >
                   {item.label}
@@ -66,47 +94,47 @@ export function Navbar() {
               </li>
             ))}
           </ul>
-          <Link to="/contact" className="btn-primary px-5 py-2.5">
-            Cere o ofertă
-          </Link>
-        </div>
 
-        <button
-          type="button"
-          className="-mr-2 inline-flex h-11 w-11 items-center justify-center text-ink lg:hidden"
-          aria-label={open ? "Închide meniul" : "Deschide meniul"}
-          aria-expanded={open}
-          aria-controls="meniu-mobil"
-          onClick={() => setOpen((prev) => !prev)}
-        >
-          <span className="relative block h-3 w-6">
-            <span
-              className={[
-                "absolute left-0 block h-px w-6 bg-current transition-transform duration-300",
-                open ? "top-1.5 rotate-45" : "top-0"
-              ].join(" ")}
-            />
-            <span
-              className={[
-                "absolute left-0 block h-px w-6 bg-current transition-transform duration-300",
-                open ? "top-1.5 -rotate-45" : "top-3"
-              ].join(" ")}
-            />
-          </span>
-        </button>
-      </nav>
+          <Link
+            to="/"
+            aria-label="Steco Events, pagina principală"
+            className="col-start-2 font-display text-[1.375rem] tracking-[0.34em] [margin-right:-0.34em]"
+          >
+            STECO
+          </Link>
+
+          <div className="col-start-3 flex items-center justify-end gap-7 text-[0.9375rem]">
+            <NavLink to="/contact" className="hidden opacity-75 transition-opacity hover:opacity-100 lg:block">
+              Cere o ofertă
+            </NavLink>
+            <button
+              type="button"
+              onClick={() => setOpen((prev) => !prev)}
+              aria-expanded={open}
+              aria-controls="meniu"
+              className="-my-2 py-2 font-medium"
+            >
+              {open ? "Închide" : "Meniu"}
+            </button>
+          </div>
+        </nav>
+      </header>
 
       {open && (
-        <div id="meniu-mobil" className="h-[calc(100svh-4rem)] overflow-y-auto border-t border-line bg-paper lg:hidden">
-          <ul className="flex flex-col px-4 pt-6 sm:px-8">
-            {navItems.map((item) => (
-              <li key={item.to} className="border-b border-line">
+        <div
+          id="meniu"
+          className="fixed inset-0 z-40 flex flex-col overflow-y-auto bg-night px-4 pb-10 pt-28 text-cream sm:px-8"
+        >
+          <ul className="mx-auto w-full max-w-[1600px] flex-1">
+            {[{ to: "/", label: "Acasă" }, ...navItems].map((item, idx) => (
+              <li key={item.to} className="page-in border-b border-cream/15" style={{ "--d": `${idx * 0.05}s` }}>
                 <NavLink
                   to={item.to}
+                  end
                   className={({ isActive }) =>
                     [
-                      "block py-4 font-display text-[2rem] leading-tight",
-                      isActive ? "text-magenta" : "text-ink"
+                      "display display-lg block py-4 transition-colors hover:text-magenta sm:py-5",
+                      isActive ? "text-magenta" : ""
                     ].join(" ")
                   }
                 >
@@ -115,13 +143,17 @@ export function Navbar() {
               </li>
             ))}
           </ul>
-          <div className="px-4 py-8 sm:px-8">
-            <Link to="/contact" className="btn-primary w-full">
-              Cere o ofertă
+          <div className="mx-auto mt-10 flex w-full max-w-[1600px] flex-wrap items-center justify-between gap-6 text-[0.9375rem] text-cream/75">
+            <div className="flex flex-wrap gap-x-8 gap-y-2">
+              {settings.email && <a href={`mailto:${settings.email}`}>{settings.email}</a>}
+              {settings.phone && <a href={`tel:${settings.phone.replace(/\s+/g, "")}`}>{settings.phone}</a>}
+            </div>
+            <Link to="/contact" className="link-dots text-cream">
+              Planifică evenimentul
             </Link>
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 }

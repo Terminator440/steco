@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { withSupabaseImageParams } from "../lib/imageUtils";
 import { ContactRequestsPanel, SiteSettingsPanel } from "./AdminPanels";
+import { clearBlocksCache } from "../lib/content";
 
 const PAGE_SLUGS = [
   { slug: "home", label: "Home" },
@@ -426,6 +427,7 @@ export function AdminPage() {
         return;
       }
 
+      clearBlocksCache();
       setPageMessage("Blocul a fost șters definitiv.");
       setPageMessageType("success");
     } catch (err) {
@@ -478,6 +480,7 @@ export function AdminPage() {
         throw upsertError;
       }
 
+      clearBlocksCache();
       const refreshed = await fetchBlocksForSlug(selectedSlug);
       setBlocks(refreshed.blocks);
       return refreshed.blocks;

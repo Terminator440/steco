@@ -1,8 +1,9 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import { Navbar } from "./components/Navbar";
 import { DynamicPage } from "./components/DynamicPage";
 import { Footer } from "./components/Footer";
+import { Invitation } from "./components/home/Invitation";
 
 const AdminPage = lazy(() =>
   import("./pages/AdminPage").then((module) => ({ default: module.AdminPage }))
@@ -11,6 +12,11 @@ const AdminPage = lazy(() =>
 export default function App() {
   const { pathname } = useLocation();
   const isAdmin = pathname.startsWith("/admin");
+
+  // Fiecare pagină nouă începe de sus, ca la un site obișnuit.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
 
   return (
     <div className="min-h-screen bg-paper text-ink">
@@ -105,6 +111,7 @@ export default function App() {
         />
       </Routes>
 
+      {!isAdmin && pathname !== "/contact" && <Invitation />}
       {!isAdmin && <Footer />}
     </div>
   );

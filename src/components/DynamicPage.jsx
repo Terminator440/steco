@@ -1,25 +1,15 @@
-import { lazy, Suspense, useEffect, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
-import { Hero } from "./Hero";
+import { Link } from "react-router-dom";
+import { blocksFor, imagesFrom, spreadImages, useAllBlocks } from "../lib/content";
 import { ContactForm } from "./ContactForm";
+import { Hero, PageHeader } from "./Hero";
+import { Manifest } from "./home/Manifest";
+import { GalleryBlock } from "./blocks/GalleryBlock";
+import { ParticipantsGridBlock } from "./blocks/ParticipantsGridBlock";
+import { ServicesGridBlock } from "./blocks/ServicesGridBlock";
+import { TextPhotoBlock } from "./blocks/TextPhotoBlock";
+import { TextSectionBlock } from "./blocks/TextSectionBlock";
 
-const TextPhotoBlock = lazy(() =>
-  import("./blocks/TextPhotoBlock").then((module) => ({ default: module.TextPhotoBlock }))
-);
-const ServicesGridBlock = lazy(() =>
-  import("./blocks/ServicesGridBlock").then((module) => ({ default: module.ServicesGridBlock }))
-);
-const GalleryBlock = lazy(() =>
-  import("./blocks/GalleryBlock").then((module) => ({ default: module.GalleryBlock }))
-);
-const TextSectionBlock = lazy(() =>
-  import("./blocks/TextSectionBlock").then((module) => ({ default: module.TextSectionBlock }))
-);
-const ParticipantsGridBlock = lazy(() =>
-  import("./blocks/ParticipantsGridBlock").then((module) => ({ default: module.ParticipantsGridBlock }))
-);
-
-const LAZY_BLOCKS = {
+const BLOCKS = {
   text_photo: TextPhotoBlock,
   services_grid: ServicesGridBlock,
   gallery: GalleryBlock,
@@ -27,123 +17,114 @@ const LAZY_BLOCKS = {
   participants_grid: ParticipantsGridBlock
 };
 
-function HeroBlock({ data, defaults, slug }) {
-  return (
-    <Hero
-      title={data?.title || defaults.title}
-      subtitle={data?.subtitle || defaults.subtitle}
-      imageUrl={data?.backgroundImageUrl}
-      ctaLabel={data?.buttonLabel}
-      ctaHref={data?.buttonHref}
-      variant={slug === "home" ? "feature" : "page"}
-    />
-  );
+// O galerie urmată de un text devine o singură secțiune: pozele în bandă, textul alături.
+function pairGalleries(blocks) {
+  const result = [];
+  for (let i = 0; i < blocks.length; i += 1) {
+    const block = blocks[i];
+    const next = blocks[i + 1];
+    if (block.block_type === "gallery" && next?.block_type === "text_section") {
+      result.push({ block, description: next.data?.text || "" });
+      i += 1;
+    } else {
+      result.push({ block });
+    }
+  }
+  return result;
 }
 
-function BlockFallback() {
-  return <div className="min-h-[40vh]" aria-hidden="true" />;
+function uniqueByUrl(images) {
+  const seen = new Set();
+  return images.filter((img) => !seen.has(img.url) && seen.add(img.url));
 }
 
-function BlockManager({ blocks, defaults, slug }) {
-  // Hero-ul e antetul paginii, așa că apare primul chiar dacă împarte order_index cu alt bloc.
+function RenderBlocks({ blocks }) {
+  return pairGalleries(blocks).map(({ block, description }) => {
+    const Block = BLOCKS[block.block_type];
+    if (!Block) return null;
+    return <Block key={block.id || `${block.block_type}-${block.order_index}`} data={block.data} description={description} />;
+  });
+}
+
+function HomePage({ all, blocks, defaults }) {
   const hero = blocks.find((block) => block.block_type === "hero");
   const rest = blocks.filter((block) => block !== hero);
+  const mission = blocksFor(all, "misiunea-noastra").find((block) => block.block_type === "text_photo");
+  const services = blocksFor(all, "servicii").find((block) => block.block_type === "services_grid");
+  const portfolio = pairGalleries(blocksFor(all, "portofoliu")).filter(({ block }) => block.block_type === "gallery");
+
+  const collage = uniqueByUrl([
+    ...(hero?.data?.backgroundImageUrl ? [{ url: hero.data.backgroundImageUrl }] : []),
+    ...spreadImages(all, 8)
+  ]).slice(0, 6);
 
   return (
     <>
-      <HeroBlock key={hero?.id || "hero-implicit"} data={hero?.data} defaults={defaults} slug={slug} />
-
-      {rest.map((block) => {
-        const key = block.id || `${block.block_type}-${block.order_index}`;
-
-        if (block.block_type === "hero") {
-          return <HeroBlock key={key} data={block.data} defaults={defaults} slug={slug} />;
-        }
-
-        const Block = LAZY_BLOCKS[block.block_type];
-        if (!Block) return null;
-
-        return (
-          <Suspense key={key} fallback={<BlockFallback />}>
-            <Block data={block.data} />
-          </Suspense>
-        );
-      })}
+      <Hero
+        title={hero?.data?.title || defaults.title}
+        subtitle={hero?.data?.subtitle}
+        ctaLabel={hero?.data?.buttonLabel}
+        ctaHref={hero?.data?.buttonHref}
+        images={collage}
+      />
+      <Manifest text={mission?.data?.text} imageUrl={mission?.data?.imageUrl} imageAlt={mission?.data?.imageAlt} />
+      {services && <ServicesGridBlock data={services.data} limit={6} moreLink="/servicii" />}
+      {portfolio.slice(0, 3).map(({ block, description }) => (
+        <GalleryBlock key={block.id} data={block.data} description={description} />
+      ))}
+      {portfolio.length > 3 && (
+        <div data-header="light" className="bg-paper pb-24 text-center">
+          <Link to="/portofoliu" className="link-dots">
+            Vezi tot portofoliul
+          </Link>
+        </div>
+      )}
+      <RenderBlocks blocks={rest} />
     </>
   );
 }
 
 export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
-  const [loading, setLoading] = useState(true);
-  const [blocks, setBlocks] = useState([]);
+  const { loading, blocks: all } = useAllBlocks();
+  const defaults = { title: defaultTitle, subtitle: defaultSubtitle };
 
-  useEffect(() => {
-    let isMounted = true;
+  if (loading) {
+    return <main className="min-h-[100svh] bg-plum" aria-busy="true" aria-label="Se încarcă pagina" />;
+  }
 
-    async function fetchBlocks() {
-      setLoading(true);
+  const blocks = blocksFor(all, slug);
 
-      try {
-        if (!supabase) {
-          setBlocks([]);
-          return;
-        }
+  if (slug === "home") {
+    return (
+      <main>
+        <HomePage all={all} blocks={blocks} defaults={defaults} />
+      </main>
+    );
+  }
 
-        const { data, error: supaError } = await supabase
-          .from("steco_page_blocks")
-          .select("*")
-          .eq("page_slug", slug)
-          .order("order_index", { ascending: true });
-
-        if (!isMounted) return;
-
-        if (supaError) {
-          console.error("[Steco] Eroare la încărcarea blocurilor:", supaError.message);
-          setBlocks([]);
-          return;
-        }
-
-        if (!data?.length) {
-          console.warn(`[Steco] Nu există blocuri pentru pagina "${slug}" în steco_page_blocks.`);
-        }
-
-        setBlocks(
-          (data || []).map((row) => ({
-            id: row.id,
-            page_slug: row.page_slug,
-            block_type: row.block_type,
-            order_index: row.order_index ?? 0,
-            data: row.content_json || row.block_data || {}
-          }))
-        );
-      } catch (err) {
-        console.error("[Steco] Eroare neașteptată la încărcarea blocurilor:", err);
-        // Vizitatorul vede pagina cu textele implicite, nu mesajul de eroare.
-        if (isMounted) setBlocks([]);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchBlocks();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [slug]);
+  const hero = blocks.find((block) => block.block_type === "hero");
+  const title = hero?.data?.title || defaults.title;
+  const same = (a, b) => Boolean(a && b) && a.trim().toLowerCase() === b.trim().toLowerCase();
+  // Un bloc care repetă titlul antetului își pierde titlul, ca să nu apară de două ori la rând.
+  const rest = blocks
+    .filter((block) => block !== hero)
+    .map((block) => (same(block.data?.title, title) ? { ...block, data: { ...block.data, title: "" } } : block));
+  const subtitle = hero?.data?.subtitle || defaults.subtitle;
+  // Nu repetăm în antet un text care apare oricum imediat dedesubt.
+  const repeatsBelow = rest.some((block) => block.data?.text && block.data.text.trim() === subtitle?.trim());
+  const images = uniqueByUrl([...imagesFrom(blocks), ...spreadImages(all, 10).slice(5)]).slice(0, 4);
 
   return (
-    <main className="min-h-screen">
-      {loading ? (
-        <div className="min-h-[100svh]" aria-busy="true" aria-label="Se încarcă pagina" />
-      ) : (
-        <>
-          <BlockManager blocks={blocks} defaults={{ title: defaultTitle, subtitle: defaultSubtitle }} slug={slug} />
-          {slug === "contact" && <ContactForm />}
-        </>
-      )}
+    <main>
+      <PageHeader
+        title={title}
+        subtitle={repeatsBelow ? "" : subtitle}
+        ctaLabel={hero?.data?.buttonLabel}
+        ctaHref={hero?.data?.buttonHref}
+        images={images}
+      />
+      <RenderBlocks blocks={rest} />
+      {slug === "contact" && <ContactForm />}
     </main>
   );
 }

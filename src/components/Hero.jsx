@@ -1,121 +1,102 @@
 import { Link } from "react-router-dom";
-import { buildSupabaseSrcSet, withSupabaseImageParams } from "../lib/imageUtils";
-import { Branch } from "./Brand";
+import { withSupabaseImageParams } from "../lib/imageUtils";
 
-const FALLBACK_IMAGE =
-  "https://images.pexels.com/photos/169211/pexels-photo-169211.jpeg?auto=compress&cs=tinysrgb&w=1400";
+// Pozițiile colajului: pozele stau pe margini, titlul rămâne liber în centru.
+// Pe telefon coboară în benzile de sus și de jos, ca să nu acopere titlul.
+// --shift dă viteza diferită a fiecărei poze la scroll (parallax pe GPU, vezi index.css).
+const HOME_SLOTS = [
+  { cls: "left-0 -top-[2%] w-[30vw] sm:-top-[4%] sm:w-[15vw] max-w-[270px]", ratio: "4 / 5", shift: "-34vh" },
+  { cls: "right-[6%] top-[9%] w-[26vw] sm:right-[13%] sm:w-[12vw] max-w-[220px]", ratio: "1 / 1", shift: "-16vh" },
+  { cls: "left-[4%] bottom-[7%] w-[38vw] sm:bottom-auto sm:top-[58%] sm:w-[19vw] max-w-[340px]", ratio: "4 / 3", shift: "-48vh" },
+  { cls: "right-0 bottom-[17%] w-[28vw] sm:bottom-auto sm:top-[47%] sm:w-[14vw] max-w-[250px]", ratio: "4 / 5", shift: "-26vh" },
+  { cls: "left-[46%] -bottom-[6%] w-[30vw] sm:left-[44%] sm:-bottom-[9%] sm:w-[14vw] max-w-[250px]", ratio: "4 / 3", shift: "-62vh" },
+  { cls: "hidden sm:block left-[27%] top-[6%] sm:w-[9vw] max-w-[160px]", ratio: "3 / 4", shift: "-10vh" }
+];
 
-// "feature" = prima pagină (imagine + crenguța animată); "page" = antet pentru paginile interioare.
-export function Hero({ title, subtitle, imageUrl, ctaLabel, ctaHref, variant = "feature" }) {
-  if (variant === "page") {
-    return <PageHeader title={title} subtitle={subtitle} imageUrl={imageUrl} ctaLabel={ctaLabel} ctaHref={ctaHref} />;
-  }
+const PAGE_SLOTS = [
+  { cls: "left-[2%] top-[10%] w-[20vw] sm:top-[16%] sm:w-[11vw] max-w-[190px]", ratio: "4 / 5", shift: "-22vh" },
+  { cls: "right-[4%] top-[14%] w-[18vw] sm:top-[26%] sm:w-[12vw] max-w-[210px]", ratio: "1 / 1", shift: "-36vh" },
+  { cls: "hidden sm:block left-[12%] -bottom-[6%] sm:w-[13vw] max-w-[230px]", ratio: "4 / 3", shift: "-14vh" },
+  { cls: "hidden sm:block right-[18%] -bottom-[10%] sm:w-[9vw] max-w-[160px]", ratio: "3 / 4", shift: "-44vh" }
+];
 
-  const heroSource = withSupabaseImageParams(imageUrl, { width: 1280, quality: 80 });
-  const heroSrcSet = buildSupabaseSrcSet(imageUrl, [640, 960, 1280, 1600], 80);
+function Collage({ images, slots, eager = false }) {
+  return images.slice(0, slots.length).map((img, idx) => {
+    const slot = slots[idx];
+    return (
+      <div
+        key={img.url}
+        aria-hidden="true"
+        className={`parallax absolute overflow-hidden bg-night/40 ${slot.cls}`}
+        style={{ aspectRatio: slot.ratio, "--shift": slot.shift }}
+      >
+        <img
+          src={withSupabaseImageParams(img.url, { width: 600, quality: 75 })}
+          alt=""
+          loading={eager && idx < 3 ? "eager" : "lazy"}
+          decoding="async"
+          className="page-in h-full w-full object-cover"
+          style={{ "--d": `${0.15 + idx * 0.08}s` }}
+        />
+      </div>
+    );
+  });
+}
+
+function titleSize(title) {
+  // Titlurile lungi coboară o treaptă, ca să nu ocupe mai mult de trei-patru rânduri.
+  return String(title || "").length > 26 ? "display-lg" : "display-xl";
+}
+
+export function Hero({ title, subtitle, ctaLabel, ctaHref, images = [] }) {
+  const heading = title || "Evenimentul tău, regizat la perfecțiune.";
 
   return (
-    <section className="relative overflow-hidden pt-24 lg:min-h-[100svh] lg:pt-0">
-      <div className="axis-line hidden lg:block" />
-      <Branch className="pointer-events-none absolute left-1/2 top-1/2 hidden h-[min(78vh,640px)] -translate-x-1/2 -translate-y-1/2 text-ink lg:block" />
+    <section data-header="dark" className="relative isolate flex min-h-[640px] h-[100svh] items-center justify-center overflow-hidden bg-plum text-cream">
+      <Collage images={images} slots={HOME_SLOTS} eager />
 
-      <div className="relative mx-auto grid max-w-7xl gap-12 px-4 pb-16 sm:px-8 lg:min-h-[100svh] lg:grid-cols-2 lg:gap-0 lg:pb-0">
-        <div className="flex flex-col justify-center lg:py-32 lg:pr-24">
-          <h1 className="type-h1 hero-rise max-w-[15ch]" style={{ "--d": "0.2s" }}>
-            {title || "Evenimentul tău, regizat la perfecțiune."}
-          </h1>
-
-          <p className="hero-rise mt-7 max-w-[42ch] text-lg text-ink-soft" style={{ "--d": "0.45s" }}>
-            {subtitle ||
-              "De la concept la ultima lumânare stinsă, Steco Events este partenerul tău pentru evenimente impecabile."}
+      <div className="relative z-10 mx-auto max-w-6xl px-4 text-center sm:px-8">
+        <h1 className={`display ${titleSize(heading)} page-in mx-auto max-w-[15ch] [text-wrap:balance]`}>
+          {heading}
+        </h1>
+        {subtitle && (
+          <p className="page-in mx-auto mt-6 max-w-[46ch] text-cream/80" style={{ "--d": "0.2s" }}>
+            {subtitle}
           </p>
-
-          <div className="hero-rise mt-10 flex flex-wrap items-center gap-x-6 gap-y-4" style={{ "--d": "0.65s" }}>
-            <Link to={ctaHref || "/contact"} className="btn-primary">
-              {ctaLabel || "Programează o discuție"}
-            </Link>
-            <Link
-              to="/portofoliu"
-              className="border-b border-ink/30 pb-0.5 text-[0.9375rem] font-medium text-ink transition-colors hover:border-magenta hover:text-magenta"
-            >
-              Vezi portofoliul
-            </Link>
-          </div>
-
-          <p
-            className="hero-rise mt-14 max-w-[46ch] border-t border-line pt-6 text-[0.9375rem] text-ink-soft"
-            style={{ "--d": "0.8s" }}
-          >
-            Peste 10 ani de nunți, botezuri, majorate și evenimente corporate. Ne ocupăm de concept, logistică și
-            coordonarea din ziua evenimentului.
-          </p>
-        </div>
-
-        <div className="flex items-center lg:py-28 lg:pl-24">
-          <figure className="hero-rise relative w-full" style={{ "--d": "0.1s" }}>
-            <div className="aspect-[4/5] w-full overflow-hidden bg-blush lg:max-h-[74vh]">
-              <img
-                src={heroSource || FALLBACK_IMAGE}
-                srcSet={heroSrcSet || undefined}
-                sizes="(max-width: 1024px) 92vw, 600px"
-                alt="Masă festivă aranjată de Steco Events"
-                width="1200"
-                height="1500"
-                loading="eager"
-                fetchPriority="high"
-                decoding="async"
-                className="h-full w-full object-cover"
-              />
-            </div>
-          </figure>
+        )}
+        <div className="page-in mt-9" style={{ "--d": "0.3s" }}>
+          <Link to={ctaHref || "/contact"} className="link-dots">
+            {ctaLabel || "Planifică evenimentul"}
+          </Link>
         </div>
       </div>
     </section>
   );
 }
 
-function PageHeader({ title, subtitle, imageUrl, ctaLabel, ctaHref }) {
-  const source = withSupabaseImageParams(imageUrl, { width: 1600, quality: 80 });
-  const srcSet = buildSupabaseSrcSet(imageUrl, [960, 1280, 1600, 2000], 80);
-
+export function PageHeader({ title, subtitle, ctaLabel, ctaHref, images = [] }) {
   return (
-    <section className="pt-32 sm:pt-40">
-      <div className="relative mx-auto grid max-w-7xl gap-6 px-4 pb-14 sm:px-8 lg:grid-cols-2 lg:gap-0 lg:pb-20">
-        <div className="axis-line hidden lg:block" />
-        <h1
-          className="type-h1 hero-rise lg:pr-16"
-          style={{ "--d": "0.05s", fontSize: "clamp(2.4rem, 4.2vw, 4rem)", lineHeight: 1.06 }}
-        >
-          {title}
-        </h1>
-        <div className="hero-rise flex flex-col justify-end lg:pl-16" style={{ "--d": "0.25s" }}>
-          {subtitle && <p className="type-lede max-w-[38ch] text-ink-soft">{subtitle}</p>}
-          {ctaLabel && (
-            <div className="mt-8">
-              <Link to={ctaHref || "/contact"} className="btn-primary">
-                {ctaLabel}
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
+    <section
+      data-header="dark"
+      className="relative isolate flex min-h-[78svh] items-center justify-center overflow-hidden bg-plum px-4 pb-24 pt-36 text-cream sm:px-8"
+    >
+      <Collage images={images} slots={PAGE_SLOTS} />
 
-      {source && (
-        <div className="mx-auto max-w-7xl px-4 pb-20 sm:px-8">
-          <div className="aspect-[16/9] overflow-hidden bg-blush sm:aspect-[21/9]">
-            <img
-              src={source}
-              srcSet={srcSet || undefined}
-              sizes="(max-width: 1280px) 100vw, 1280px"
-              alt=""
-              width="2100"
-              height="900"
-              decoding="async"
-              className="h-full w-full object-cover"
-            />
+      <div className="relative z-10 mx-auto max-w-5xl text-center">
+        <h1 className="display display-lg page-in mx-auto max-w-[18ch] [text-wrap:balance]">{title}</h1>
+        {subtitle && (
+          <p className="page-in mx-auto mt-7 max-w-[52ch] text-lg text-cream/80" style={{ "--d": "0.15s" }}>
+            {subtitle}
+          </p>
+        )}
+        {ctaLabel && (
+          <div className="page-in mt-9" style={{ "--d": "0.25s" }}>
+            <Link to={ctaHref || "/contact"} className="link-dots">
+              {ctaLabel}
+            </Link>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </section>
   );
 }

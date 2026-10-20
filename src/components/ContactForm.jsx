@@ -24,7 +24,7 @@ const EMPTY = {
 };
 
 const fieldClass =
-  "w-full rounded-[3px] border border-line bg-paper px-4 py-3 text-ink placeholder:text-ink-soft/60 transition-colors focus:border-ink focus:outline-none";
+  "w-full rounded-none border-0 border-b border-ink/25 bg-transparent px-0 py-3 text-ink placeholder:text-ink-soft/60 transition-colors focus:border-ink focus:outline-none";
 
 function Field({ label, htmlFor, hint, children, className = "" }) {
   return (
@@ -95,12 +95,10 @@ export function ContactForm() {
   }
 
   return (
-    <section className="pb-24">
-      <div className="relative mx-auto grid max-w-7xl gap-14 px-4 sm:px-8 lg:grid-cols-2 lg:gap-0">
-        <div className="axis-line hidden lg:block" />
-
-        <div className="lg:pr-20">
-          <h2 className="type-h2">Ce ne spui acum ne ajută să venim pregătiți.</h2>
+    <section data-header="light" className="bg-paper px-4 py-24 sm:px-8 sm:py-32">
+      <div className="mx-auto grid max-w-[1400px] gap-16 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-24">
+        <div>
+          <h2 className="display display-md reveal max-w-[16ch]">Ce ne spui acum ne ajută să venim pregătiți.</h2>
           <p className="mt-6 max-w-[46ch] text-ink-soft">
             Data și numărul aproximativ de invitați sunt suficiente pentru o primă discuție. Restul îl stabilim
             împreună.
@@ -111,7 +109,7 @@ export function ContactForm() {
               {settings.phone && (
                 <div>
                   <dt className="text-[0.9375rem] text-ink-soft">Telefon</dt>
-                  <dd className="mt-1 font-display text-[1.5rem]">
+                  <dd className="mt-1 text-[1.25rem] font-medium">
                     <a href={`tel:${settings.phone.replace(/\s+/g, "")}`} className="hover:text-magenta">
                       {settings.phone}
                     </a>
@@ -121,7 +119,7 @@ export function ContactForm() {
               {settings.email && (
                 <div>
                   <dt className="text-[0.9375rem] text-ink-soft">Email</dt>
-                  <dd className="mt-1 font-display text-[1.5rem]">
+                  <dd className="mt-1 text-[1.25rem] font-medium">
                     <a href={`mailto:${settings.email}`} className="break-all hover:text-magenta">
                       {settings.email}
                     </a>
@@ -156,10 +154,10 @@ export function ContactForm() {
           )}
         </div>
 
-        <div className="lg:pl-20">
+        <div>
           {status === "sent" ? (
             <div className="border-t border-magenta pt-8" role="status">
-              <p className="type-h3">Am primit cererea ta.</p>
+              <p className="display display-sm">Am primit cererea ta.</p>
               <p className="mt-4 max-w-[44ch] text-ink-soft">
                 Revenim pe email sau telefon cu o propunere pentru evenimentul tău.
               </p>
@@ -172,7 +170,7 @@ export function ContactForm() {
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="grid gap-6 sm:grid-cols-2">
+            <form onSubmit={handleSubmit} className="grid gap-x-8 gap-y-8 sm:grid-cols-2">
               <Field label="Nume" htmlFor="cf-name" className="sm:col-span-2">
                 <input
                   id="cf-name"
