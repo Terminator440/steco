@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { withSupabaseImageParams } from "../lib/imageUtils";
+import { ContactRequestsPanel, SiteSettingsPanel } from "./AdminPanels";
 
 const PAGE_SLUGS = [
   { slug: "home", label: "Home" },
@@ -23,7 +24,12 @@ function getUID() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
   }
-  return `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+  // Coloana id din Supabase este uuid, așa că fallback-ul generează tot un uuid v4.
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 function createEmptyBlock(type, pageSlug, orderIndex) {
@@ -190,9 +196,15 @@ function TrashIcon() {
 }
 
 export function AdminPage() {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isAuthed, setIsAuthed] = useState(false);
+  const [session, setSession] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [signingIn, setSigningIn] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [activeTab, setActiveTab] = useState("pagini");
+  const isAuthed = Boolean(session && isAdmin);
 
   const [selectedSlug, setSelectedSlug] = useState(PAGE_SLUGS[0].slug);
   const [blocks, setBlocks] = useState([]);
@@ -240,11 +252,50 @@ export function AdminPage() {
   }
 
   useEffect(() => {
-    const stored = window.localStorage.getItem("steco_session");
-    if (stored === "true") {
-      setIsAuthed(true);
+    if (!supabase) {
+      setAuthChecking(false);
+      return undefined;
     }
+
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      if (!data.session) setAuthChecking(false);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+    });
+
+    return () => listener.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!supabase || !session) {
+      setIsAdmin(false);
+      return undefined;
+    }
+
+    let isMounted = true;
+    setAuthChecking(true);
+
+    // RLS lasă fiecare utilizator să-și vadă doar propriul rând din steco_admins.
+    supabase
+      .from("steco_admins")
+      .select("user_id")
+      .eq("user_id", session.user.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!isMounted) return;
+        if (error) console.error("[Steco] Eroare la verificarea drepturilor de admin:", error.message);
+        setIsAdmin(Boolean(data));
+        if (!data) setAuthError("Contul există, dar nu are drept de administrare.");
+        setAuthChecking(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [session]);
 
   useEffect(() => {
     if (!isAuthed || !supabase) return;
@@ -278,17 +329,29 @@ export function AdminPage() {
   async function handleLogin(e) {
     e.preventDefault();
     setAuthError("");
-    if (password !== "admin123") {
-      setAuthError("Parolă incorectă.");
+
+    if (!supabase) {
+      setAuthError("Supabase nu este configurat.");
       return;
     }
-    window.localStorage.setItem("steco_session", "true");
-    setIsAuthed(true);
+
+    setSigningIn(true);
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    setSigningIn(false);
+
+    if (error) {
+      setAuthError("Email sau parolă greșită.");
+      return;
+    }
+
+    setPassword("");
   }
 
   async function handleLogout() {
-    window.localStorage.removeItem("steco_session");
-    setIsAuthed(false);
+    await supabase?.auth.signOut();
+    setSession(null);
+    setIsAdmin(false);
+    setBlocks([]);
   }
 
   function updateBlock(index, newBlock) {
@@ -386,10 +449,8 @@ export function AdminPage() {
 
     const safeBlocks = Array.isArray(blocksToSave) ? blocksToSave : [];
 
-    const allHaveId = safeBlocks.every((block) => block && block.id != null);
-
     const payload = safeBlocks.map((block, index) => ({
-      ...(allHaveId ? { id: block.id } : {}),
+      id: block.id ?? getUID(),
       page_slug: block.page_slug || selectedSlug,
       block_type: block.block_type,
       content_json: block.data || {},
@@ -401,9 +462,7 @@ export function AdminPage() {
     // eslint-disable-next-line no-console
     console.log("Payload UPSERT (incl. ID când există):", payload);
 
-    const upsertOptions = allHaveId
-      ? { onConflict: "id" }
-      : { onConflict: "page_slug, block_type, order_index" };
+    const upsertOptions = { onConflict: "id" };
 
     let didAlert = false;
     try {
@@ -557,6 +616,14 @@ export function AdminPage() {
     setUploadingImagePath("");
   }
 
+  if (authChecking && !isAuthed) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-sm text-slate-300">
+        Se verifică sesiunea...
+      </main>
+    );
+  }
+
   if (!isAuthed) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
@@ -570,13 +637,28 @@ export function AdminPage() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
+              <label className="mb-1.5 block text-xs font-medium text-slate-300" htmlFor="email">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                autoComplete="username"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none ring-0 ring-rose-500/30 focus:border-rose-500 focus:ring-2"
+              />
+            </div>
+            <div>
               <label className="mb-1.5 block text-xs font-medium text-slate-300" htmlFor="password">
-                Parolă administrator
+                Parolă
               </label>
               <input
                 id="password"
                 type="password"
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none ring-0 ring-rose-500/30 focus:border-rose-500 focus:ring-2"
@@ -591,10 +673,21 @@ export function AdminPage() {
 
             <button
               type="submit"
+              disabled={signingIn}
               className="btn-primary flex w-full items-center justify-center disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Intră în cont
+              {signingIn ? "Se verifică..." : "Intră în cont"}
             </button>
+
+            {session && !isAdmin && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full text-center text-xs text-slate-400 underline hover:text-slate-200"
+              >
+                Ieși din contul {session.user.email}
+              </button>
+            )}
           </form>
         </div>
       </main>
@@ -622,7 +715,33 @@ export function AdminPage() {
         </button>
       </div>
 
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 lg:flex-row">
+      <nav className="mx-auto mb-6 flex max-w-6xl gap-2" aria-label="Secțiuni administrare">
+        {[
+          { id: "pagini", label: "Pagini" },
+          { id: "cereri", label: "Cereri de ofertă" },
+          { id: "setari", label: "Date de contact" }
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            aria-pressed={activeTab === tab.id}
+            className={[
+              "rounded-full border px-4 py-2 text-sm font-medium",
+              activeTab === tab.id
+                ? "border-rose-500 bg-rose-500/10 text-rose-200"
+                : "border-slate-700 text-slate-300 hover:border-slate-500"
+            ].join(" ")}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
+      {activeTab === "cereri" && <ContactRequestsPanel />}
+      {activeTab === "setari" && <SiteSettingsPanel />}
+
+      <div className={activeTab === "pagini" ? "mx-auto flex max-w-6xl flex-col gap-6 lg:flex-row" : "hidden"}>
         <aside className="w-full rounded-2xl border border-slate-800 bg-slate-900/80 p-5 lg:w-72">
           <div className="mb-4">
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">

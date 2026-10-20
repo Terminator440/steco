@@ -1,13 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { withSupabaseImageParams } from "../../lib/imageUtils";
 
-// Fiecare a șasea fotografie ocupă un spațiu dublu, ca într-un album, nu ca într-un tabel.
-function tileClass(idx) {
-  if (idx % 6 === 0) return "col-span-2 row-span-2";
-  if (idx % 6 === 4) return "row-span-2";
-  return "";
-}
-
 export function GalleryBlock({ data }) {
   const images = (data?.images || []).filter((img) => img?.url);
   const dialogRef = useRef(null);
@@ -55,23 +48,24 @@ export function GalleryBlock({ data }) {
           <p className="text-[0.9375rem] text-ink-soft">{images.length} fotografii. Apasă pe una ca să o vezi mare.</p>
         </div>
 
-        <ul className="grid auto-rows-[44vw] grid-cols-2 gap-2 [grid-auto-flow:dense] sm:auto-rows-[200px] sm:gap-3 md:grid-cols-4 lg:auto-rows-[240px]">
+        {/* Coloane ca într-un album: fiecare poză își păstrează proporțiile și nu rămân goluri. */}
+        <ul className={`gap-3 ${images.length >= 3 ? "columns-2 lg:columns-3" : "columns-1 sm:columns-2"}`}>
           {images.map((img, idx) => (
-            <li key={img.id || img.url || idx} className={tileClass(idx)}>
+            <li key={img.id || img.url || idx} className="mb-3 break-inside-avoid">
               <button
                 type="button"
                 onClick={() => open(idx)}
-                className="group block h-full w-full overflow-hidden bg-blush"
+                className="group block w-full overflow-hidden bg-blush"
                 aria-label={`Deschide fotografia ${idx + 1}${img.alt ? `: ${img.alt}` : ""}`}
               >
                 <img
-                  src={withSupabaseImageParams(img.url, { width: idx % 6 === 0 ? 1200 : 700, quality: 80 })}
+                  src={withSupabaseImageParams(img.url, { width: 900, quality: 80 })}
                   alt={img.alt || ""}
                   width="1200"
                   height="800"
                   loading="lazy"
                   decoding="async"
-                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                  className="h-auto w-full transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                 />
               </button>
             </li>

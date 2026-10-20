@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { Hero } from "./Hero";
+import { ContactForm } from "./ContactForm";
 
 const TextPhotoBlock = lazy(() =>
   import("./blocks/TextPhotoBlock").then((module) => ({ default: module.TextPhotoBlock }))
@@ -44,13 +45,15 @@ function BlockFallback() {
 }
 
 function BlockManager({ blocks, defaults, slug }) {
-  const hasHero = blocks.some((block) => block.block_type === "hero");
+  // Hero-ul e antetul paginii, așa că apare primul chiar dacă împarte order_index cu alt bloc.
+  const hero = blocks.find((block) => block.block_type === "hero");
+  const rest = blocks.filter((block) => block !== hero);
 
   return (
     <>
-      {!hasHero && <HeroBlock data={null} defaults={defaults} slug={slug} />}
+      <HeroBlock key={hero?.id || "hero-implicit"} data={hero?.data} defaults={defaults} slug={slug} />
 
-      {blocks.map((block) => {
+      {rest.map((block) => {
         const key = block.id || `${block.block_type}-${block.order_index}`;
 
         if (block.block_type === "hero") {
@@ -136,7 +139,10 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
       {loading ? (
         <div className="min-h-[100svh]" aria-busy="true" aria-label="Se încarcă pagina" />
       ) : (
-        <BlockManager blocks={blocks} defaults={{ title: defaultTitle, subtitle: defaultSubtitle }} slug={slug} />
+        <>
+          <BlockManager blocks={blocks} defaults={{ title: defaultTitle, subtitle: defaultSubtitle }} slug={slug} />
+          {slug === "contact" && <ContactForm />}
+        </>
       )}
     </main>
   );

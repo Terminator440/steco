@@ -21,7 +21,7 @@ export function Hero({ title, subtitle, imageUrl, ctaLabel, ctaHref, variant = "
 
       <div className="relative mx-auto grid max-w-7xl gap-12 px-4 pb-16 sm:px-8 lg:min-h-[100svh] lg:grid-cols-2 lg:gap-0 lg:pb-0">
         <div className="flex flex-col justify-center lg:py-32 lg:pr-24">
-          <h1 className="type-h1 hero-rise max-w-[13ch]" style={{ "--d": "0.2s" }}>
+          <h1 className="type-h1 hero-rise max-w-[15ch]" style={{ "--d": "0.2s" }}>
             {title || "Evenimentul tău, regizat la perfecțiune."}
           </h1>
 
@@ -82,7 +82,10 @@ function PageHeader({ title, subtitle, imageUrl, ctaLabel, ctaHref }) {
     <section className="pt-32 sm:pt-40">
       <div className="relative mx-auto grid max-w-7xl gap-6 px-4 pb-14 sm:px-8 lg:grid-cols-2 lg:gap-0 lg:pb-20">
         <div className="axis-line hidden lg:block" />
-        <h1 className="type-h1 hero-rise lg:pr-16" style={{ "--d": "0.05s" }}>
+        <h1
+          className="type-h1 hero-rise lg:pr-16"
+          style={{ "--d": "0.05s", fontSize: "clamp(2.4rem, 4.2vw, 4rem)", lineHeight: 1.06 }}
+        >
           {title}
         </h1>
         <div className="hero-rise flex flex-col justify-end lg:pl-16" style={{ "--d": "0.25s" }}>

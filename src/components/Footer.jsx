@@ -1,10 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
 import { Branch } from "./Brand";
 import { navItems } from "./Navbar";
+import { socialLinks, useSiteSettings } from "../lib/siteSettings";
 
 export function Footer() {
   const { pathname } = useLocation();
   const showInvitation = pathname !== "/contact";
+  const settings = useSiteSettings();
+  const links = socialLinks(settings);
 
   return (
     <footer className="bg-ink text-paper">
@@ -35,6 +38,20 @@ export function Footer() {
         <div>
           <p className="font-display text-[1.35rem] tracking-[0.3em]">STECO</p>
           <p className="mt-1 text-paper/60">Event planning &amp; management</p>
+          {(settings.phone || settings.email) && (
+            <p className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-paper/85">
+              {settings.phone && (
+                <a href={`tel:${settings.phone.replace(/\s+/g, "")}`} className="hover:text-paper">
+                  {settings.phone}
+                </a>
+              )}
+              {settings.email && (
+                <a href={`mailto:${settings.email}`} className="hover:text-paper">
+                  {settings.email}
+                </a>
+              )}
+            </p>
+          )}
         </div>
         <ul className="flex flex-wrap gap-x-7 gap-y-3 text-paper/75">
           {navItems.map((item) => (
@@ -47,6 +64,17 @@ export function Footer() {
         </ul>
         <div className="flex flex-wrap justify-between gap-4 border-t border-paper/15 pt-6 text-[0.8125rem] text-paper/50 md:col-span-2">
           <p>© {new Date().getFullYear()} Steco Events</p>
+          {links.length > 0 && (
+            <ul className="flex gap-5">
+              {links.map((link) => (
+                <li key={link.label}>
+                  <a href={link.href} target="_blank" rel="noreferrer" className="hover:text-paper">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
           <Link to="/admin" className="hover:text-paper">
             Administrare
           </Link>
