@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
-import { navItems } from "./Navbar";
+import { useNavItems } from "./Navbar";
 import { socialLinks, useSiteSettings } from "../lib/siteSettings";
 
 export function Footer() {
   const settings = useSiteSettings();
+  const items = useNavItems();
   const links = socialLinks(settings);
 
   return (
@@ -14,29 +15,30 @@ export function Footer() {
           evenimentului.
         </p>
 
-        <ul className="space-y-2">
-          {navItems.map((item) => (
+        {/* py-1.5: pe telefon linkurile se ating ușor cu degetul. */}
+        <ul>
+          {items.map((item) => (
             <li key={item.to}>
-              <Link to={item.to} className="text-cream/75 transition-colors hover:text-cream">
+              <Link to={item.to} className="inline-block py-1.5 text-cream/75 transition-colors hover:text-cream">
                 {item.label}
               </Link>
             </li>
           ))}
         </ul>
 
-        <div className="space-y-2">
+        <div>
           {settings.email && (
-            <a href={`mailto:${settings.email}`} className="block text-cream/75 hover:text-cream">
+            <a href={`mailto:${settings.email}`} className="block py-1.5 text-cream/75 hover:text-cream">
               {settings.email}
             </a>
           )}
           {settings.phone && (
-            <a href={`tel:${settings.phone.replace(/\s+/g, "")}`} className="block text-cream/75 hover:text-cream">
+            <a href={`tel:${settings.phone.replace(/\s+/g, "")}`} className="block py-1.5 text-cream/75 hover:text-cream">
               {settings.phone}
             </a>
           )}
           {links.map((link) => (
-            <a key={link.label} href={link.href} target="_blank" rel="noreferrer" className="block text-cream/75 hover:text-cream">
+            <a key={link.label} href={link.href} target="_blank" rel="noreferrer" className="block py-1.5 text-cream/75 hover:text-cream">
               {link.label}
             </a>
           ))}

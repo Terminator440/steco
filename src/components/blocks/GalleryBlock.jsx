@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { anchorFor } from "../../lib/eventTypes";
 import { withSupabaseImageParams } from "../../lib/imageUtils";
 import { withoutEmoji } from "../../lib/text";
 
@@ -53,7 +54,16 @@ function useDragScroll(ref) {
   }, [ref]);
 }
 
+function Arrow({ back = false }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={`h-5 w-5 ${back ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M4 12h15M13 6l6 6-6 6" />
+    </svg>
+  );
+}
+
 function Lightbox({ images, dialogRef, active, setActive }) {
+  const swipe = useRef(null);
   const close = () => dialogRef.current?.close();
 
   const step = useCallback(
@@ -100,9 +110,30 @@ function Lightbox({ images, dialogRef, active, setActive }) {
               Închide
             </button>
           </div>
+          {/* Pe telefon pozele se schimbă și cu degetul, spre stânga sau spre dreapta. */}
           <div
             className="flex min-h-0 flex-1 items-center justify-center px-4 sm:px-20"
-            onClick={(event) => event.target === event.currentTarget && close()}
+            style={{ touchAction: "pan-y pinch-zoom" }}
+            onPointerDown={(event) => {
+              swipe.current = event.pointerType === "mouse" ? null : { x: event.clientX, done: false };
+            }}
+            onPointerCancel={() => {
+              swipe.current = null;
+            }}
+            onPointerUp={(event) => {
+              const start = swipe.current;
+              if (!start) return;
+              const dx = event.clientX - start.x;
+              if (Math.abs(dx) > 50 && images.length > 1) {
+                start.done = true;
+                step(dx < 0 ? 1 : -1);
+              }
+            }}
+            onClick={(event) => {
+              const swiped = swipe.current?.done;
+              swipe.current = null;
+              if (!swiped && event.target === event.currentTarget) close();
+            }}
           >
             <img
               src={withSupabaseImageParams(current.url, { width: 1800, quality: 85 })}
@@ -145,8 +176,21 @@ export function GalleryBlock({ data, description }) {
     dialogRef.current?.showModal();
   };
 
+  // Butoanele de lângă bandă, pentru cine folosește mouse-ul: avansează cam un ecran de poze.
+  const scrollStrip = (direction) => {
+    const strip = stripRef.current;
+    if (!strip) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    strip.scrollBy({ left: direction * strip.clientWidth * 0.8, behavior: reduce ? "auto" : "smooth" });
+  };
+
   return (
-    <section data-header="light" className="bg-paper py-20 sm:py-28" style={{ timelineScope: timeline }}>
+    <section
+      id={anchorFor(heading) || undefined}
+      data-header="light"
+      className="bg-paper py-20 sm:py-28"
+      style={{ timelineScope: timeline }}
+    >
       <div className="mx-auto max-w-[1400px] px-4 sm:px-8">
         <h2 className="display display-lg reveal flex flex-wrap items-center gap-x-5 gap-y-3">
           <span>{heading}</span>
@@ -169,7 +213,7 @@ export function GalleryBlock({ data, description }) {
             data-strip
             tabIndex={0}
             aria-label={`Fotografii ${heading}. Derulează orizontal.`}
-            className="no-scrollbar flex cursor-grab snap-x gap-3 overflow-x-auto overscroll-x-contain px-4 select-none active:cursor-grabbing sm:px-8 lg:pr-0 [@media(pointer:coarse)]:snap-mandatory"
+            className="no-scrollbar flex cursor-grab snap-x scroll-pl-4 gap-3 overflow-x-auto overscroll-x-contain px-4 select-none active:cursor-grabbing sm:scroll-pl-8 sm:px-8 lg:pr-0 [@media(pointer:coarse)]:snap-mandatory"
             style={{ scrollTimeline: `${timeline} inline` }}
           >
             {images.map((img, idx) => (
@@ -205,6 +249,22 @@ export function GalleryBlock({ data, description }) {
                   style={{ "--strip": timeline }}
                 />
               </span>
+              <div className="ml-auto flex gap-2 [@media(pointer:coarse)]:hidden">
+                {[
+                  { direction: -1, label: "Pozele anterioare" },
+                  { direction: 1, label: "Pozele următoare" }
+                ].map(({ direction, label }) => (
+                  <button
+                    key={direction}
+                    type="button"
+                    onClick={() => scrollStrip(direction)}
+                    aria-label={label}
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-ink/25 text-ink transition-colors hover:border-magenta hover:bg-magenta hover:text-cream"
+                  >
+                    <Arrow back={direction < 0} />
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>

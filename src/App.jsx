@@ -12,13 +12,14 @@ const AdminPage = lazy(() =>
 );
 
 export default function App() {
-  const { pathname } = useLocation();
+  const { pathname, hash } = useLocation();
   const isAdmin = pathname.startsWith("/admin");
 
   // Fiecare pagină nouă începe de sus, ca la un site obișnuit.
+  // Linkurile cu ancoră (/portofoliu#botez) le derulează DynamicPage, după ce apare conținutul.
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
+    if (!hash) window.scrollTo(0, 0);
+  }, [pathname, hash]);
 
   return (
     <div className="min-h-screen bg-paper text-ink">

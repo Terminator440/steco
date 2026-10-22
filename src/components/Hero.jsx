@@ -74,13 +74,20 @@ export function Hero({ title, subtitle, ctaLabel, ctaHref, images = [] }) {
   );
 }
 
-export function PageHeader({ title, subtitle, ctaLabel, ctaHref, images = [] }) {
+// compact: antet mai scund (pe Contact), ca formularul să se vadă repede. Pe telefon e fără colaj,
+// fiindcă pozele ar ajunge peste titlu.
+export function PageHeader({ title, subtitle, ctaLabel, ctaHref, images = [], compact = false }) {
   return (
     <section
       data-header="dark"
-      className="relative isolate flex min-h-[78svh] items-center justify-center overflow-hidden bg-plum px-4 pb-24 pt-36 text-cream sm:px-8"
+      className={[
+        "relative isolate flex items-center justify-center overflow-hidden bg-plum px-4 text-cream sm:px-8",
+        compact ? "min-h-[50svh] pb-16 pt-32" : "min-h-[78svh] pb-24 pt-36"
+      ].join(" ")}
     >
-      <Collage images={images} slots={PAGE_SLOTS} />
+      <div className={compact ? "hidden sm:contents" : "contents"}>
+        <Collage images={images} slots={PAGE_SLOTS} />
+      </div>
 
       <div className="relative z-10 mx-auto max-w-5xl text-center">
         <h1 className="display display-lg page-in mx-auto max-w-[18ch] [text-wrap:balance]">{title}</h1>

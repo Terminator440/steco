@@ -1,6 +1,8 @@
 import { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { blocksFor, imagesFrom, spreadImages, useAllBlocks } from "../lib/content";
+import { anchorFor } from "../lib/eventTypes";
+import { withoutEmoji } from "../lib/text";
 import { ContactForm } from "./ContactForm";
 import { Hero, PageHeader } from "./Hero";
 import { Manifest } from "./home/Manifest";
@@ -45,6 +47,33 @@ function RenderBlocks({ blocks }) {
     if (!Block) return null;
     return <Block key={block.id || `${block.block_type}-${block.order_index}`} data={block.data} description={description} />;
   });
+}
+
+// Cuprinsul galeriilor (pe Portofoliu): sari direct la tipul de eveniment căutat.
+function GalleryIndex({ blocks }) {
+  const links = blocks
+    .filter((block) => block.block_type === "gallery" && block.data?.images?.some((img) => img?.url))
+    .map((block) => {
+      const label = withoutEmoji(block.data.heading) || "Galerie foto";
+      return { label, anchor: anchorFor(label) };
+    })
+    .filter((link) => link.anchor);
+
+  if (links.length < 3) return null;
+
+  return (
+    <nav data-header="light" aria-label="Galerii" className="border-b border-line bg-paper px-4 py-8 sm:px-8">
+      <ul className="mx-auto flex max-w-[1400px] flex-wrap justify-center gap-x-8 gap-y-2">
+        {links.map((link) => (
+          <li key={link.anchor}>
+            <Link to={`#${link.anchor}`} className="display inline-block py-2 text-[1.125rem] transition-colors hover:text-magenta">
+              {link.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
 }
 
 function HomePage({ all, blocks, defaults }) {
@@ -96,10 +125,18 @@ const PAGE_TITLES = {
 
 export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
   const { loading, blocks: all } = useAllBlocks();
+  const { hash, key } = useLocation();
 
   useEffect(() => {
     document.title = PAGE_TITLES[slug] || PAGE_TITLES.home;
   }, [slug]);
+
+  // Ancora din adresă (/portofoliu#botez) există abia după ce vine conținutul din Supabase.
+  useEffect(() => {
+    if (loading || !hash) return;
+    document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView();
+  }, [loading, hash, key]);
+
   const defaults = { title: defaultTitle, subtitle: defaultSubtitle };
 
   if (loading) {
@@ -137,7 +174,9 @@ export function DynamicPage({ slug, defaultTitle, defaultSubtitle }) {
         ctaLabel={hero?.data?.buttonLabel}
         ctaHref={hero?.data?.buttonHref}
         images={images}
+        compact={slug === "contact"}
       />
+      <GalleryIndex blocks={rest} />
       <RenderBlocks blocks={rest} />
       {slug === "contact" && <ContactForm />}
     </main>

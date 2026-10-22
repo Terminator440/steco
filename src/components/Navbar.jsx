@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
+import { blocksFor, useAllBlocks } from "../lib/content";
 import { useSiteSettings } from "../lib/siteSettings";
 
 export const navItems = [
@@ -9,6 +10,15 @@ export const navItems = [
   { to: "/participanti", label: "Participanți" },
   { to: "/contact", label: "Contact" }
 ];
+
+// Participanți apare în meniu doar când pagina are pe cine să arate, altfel ar fi o pagină goală.
+export function useNavItems() {
+  const { blocks } = useAllBlocks();
+  const hasParticipants = blocksFor(blocks, "participanti").some(
+    (block) => block.block_type === "participants_grid" && block.data?.participants?.length
+  );
+  return hasParticipants ? navItems : navItems.filter((item) => item.to !== "/participanti");
+}
 
 // Antetul e transparent: își schimbă culoarea după secțiunea de sub el (data-header="dark" | "light").
 function useHeaderTheme(pathname) {
@@ -84,6 +94,7 @@ export function Navbar() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const settings = useSiteSettings();
+  const items = useNavItems();
   const sectionTheme = useHeaderTheme(location.pathname);
   const theme = open ? "dark" : sectionTheme;
   const scroll = useScrollState();
@@ -116,7 +127,7 @@ export function Navbar() {
       >
         <nav className="mx-auto grid max-w-[1600px] grid-cols-[1fr_auto_1fr] items-center px-4 py-5 sm:px-8">
           <ul className="hidden items-center gap-7 text-[0.9375rem] lg:flex">
-            {navItems.slice(0, 3).map((item) => (
+            {items.slice(0, 3).map((item) => (
               <li key={item.to}>
                 <NavLink
                   to={item.to}
@@ -161,7 +172,7 @@ export function Navbar() {
           className="fixed inset-0 z-40 flex flex-col overflow-y-auto bg-night px-4 pb-10 pt-28 text-cream sm:px-8"
         >
           <ul className="mx-auto w-full max-w-[1600px] flex-1">
-            {[{ to: "/", label: "Acasă" }, ...navItems].map((item, idx) => (
+            {[{ to: "/", label: "Acasă" }, ...items].map((item, idx) => (
               <li key={item.to} className="page-in border-b border-cream/15" style={{ "--d": `${idx * 0.05}s` }}>
                 <NavLink
                   to={item.to}

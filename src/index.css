@@ -111,60 +111,66 @@ body {
   outline-offset: 3px;
 }
 
-/* Titlurile în majuscule clasice, ca „STECO” din logo. */
-.display {
-  font-family: var(--font-display);
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.01em;
-}
+/*
+  Clasele proprii stau în stratul „components”, ca utilitarele Tailwind de pe același element
+  să le poată ajusta (de exemplu tracking-[0.06em] pe „STECO” din footer).
+*/
+@layer components {
+  /* Titlurile în majuscule clasice, ca „STECO” din logo. */
+  .display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+  }
 
-.display-xl {
-  font-size: clamp(2.9rem, 8.4vw, 9rem);
-  line-height: 0.94;
-}
+  .display-xl {
+    font-size: clamp(2.9rem, 8.4vw, 9rem);
+    line-height: 0.94;
+  }
 
-.display-lg {
-  font-size: clamp(2.3rem, 5.6vw, 5.75rem);
-  line-height: 0.98;
-}
+  .display-lg {
+    font-size: clamp(2.3rem, 5.6vw, 5.75rem);
+    line-height: 0.98;
+  }
 
-.display-md {
-  font-size: clamp(1.75rem, 3.3vw, 3.25rem);
-  line-height: 1.08;
-}
+  .display-md {
+    font-size: clamp(1.75rem, 3.3vw, 3.25rem);
+    line-height: 1.08;
+  }
 
-.display-sm {
-  font-size: clamp(1.4rem, 2vw, 1.875rem);
-  line-height: 1.12;
-}
+  .display-sm {
+    font-size: clamp(1.4rem, 2vw, 1.875rem);
+    line-height: 1.12;
+  }
 
-/* Linkul principal: text între două puncte magenta. */
-.link-dots {
-  @apply inline-flex items-center gap-3 text-[0.9375rem] font-medium tracking-[0.02em] transition-opacity hover:opacity-75;
-}
+  /* Linkul principal: text între două puncte magenta. */
+  .link-dots {
+    @apply inline-flex items-center gap-3 text-[0.9375rem] font-medium tracking-[0.02em] transition-opacity hover:opacity-75;
+  }
 
-.link-dots::before,
-.link-dots::after {
-  content: "";
-  @apply block h-1.5 w-1.5 rounded-full bg-magenta;
-}
+  .link-dots::before,
+  .link-dots::after {
+    content: "";
+    @apply block h-1.5 w-1.5 rounded-full bg-magenta;
+  }
 
-.btn-round {
-  @apply inline-flex h-36 w-36 items-center justify-center rounded-full border text-center text-[0.9375rem] font-medium leading-tight transition-colors duration-300;
-  border-color: color-mix(in srgb, currentColor 40%, transparent);
-}
+  .btn-round {
+    @apply inline-flex h-36 w-36 items-center justify-center rounded-full border text-center text-[0.9375rem] font-medium leading-tight transition-colors duration-300;
+    border-color: color-mix(in srgb, currentColor 40%, transparent);
+  }
 
-.btn-round:hover {
-  background: var(--color-magenta);
-  border-color: var(--color-magenta);
-  color: var(--color-cream);
-}
+  .btn-round:hover {
+    background: var(--color-magenta);
+    border-color: var(--color-magenta);
+    color: var(--color-cream);
+  }
 
-.btn-primary {
-  @apply inline-flex items-center justify-center rounded-full px-6 py-3 text-[0.9375rem] font-medium
-    bg-magenta text-cream hover:bg-magenta-deep transition-colors duration-200
-    disabled:opacity-60;
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-full px-6 py-3 text-[0.9375rem] font-medium
+      bg-magenta text-cream hover:bg-magenta-deep transition-colors duration-200
+      disabled:opacity-60;
+  }
 }
 
 .no-scrollbar {

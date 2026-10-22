@@ -1,23 +1,16 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { EVENT_TYPES, isEventType } from "../lib/eventTypes";
 import { supabase } from "../lib/supabaseClient";
 import { socialLinks, useSiteSettings } from "../lib/siteSettings";
 
-const EVENT_TYPES = [
-  { value: "nunta", label: "Nuntă" },
-  { value: "botez", label: "Botez" },
-  { value: "majorat", label: "Majorat" },
-  { value: "aniversare", label: "Aniversare" },
-  { value: "gender_reveal", label: "Gender reveal" },
-  { value: "candy_bar", label: "Candy bar" },
-  { value: "altul", label: "Alt eveniment" }
-];
-
+// Tipul evenimentului pornește gol, ca o cerere de botez să nu plece din greșeală ca „Nuntă”.
+// De pe pagina Servicii vine deja ales (/contact?tip=botez).
 const EMPTY = {
   name: "",
   email: "",
   phone: "",
-  event_type: "nunta",
+  event_type: "",
   event_date: "",
   guests: "",
   location: "",
@@ -43,7 +36,11 @@ function Field({ label, htmlFor, hint, children, className = "" }) {
 
 export function ContactForm() {
   const settings = useSiteSettings();
-  const [values, setValues] = useState(EMPTY);
+  const [searchParams] = useSearchParams();
+  const [values, setValues] = useState(() => {
+    const tip = searchParams.get("tip");
+    return isEventType(tip) ? { ...EMPTY, event_type: tip } : EMPTY;
+  });
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");
 
@@ -98,66 +95,18 @@ export function ContactForm() {
   }
 
   return (
-    <section data-header="light" className="bg-paper px-4 py-24 sm:px-8 sm:py-32">
-      <div className="mx-auto grid max-w-[1400px] gap-16 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-24">
+    <section id="formular" data-header="light" className="scroll-mt-4 bg-paper px-4 py-16 sm:px-8 sm:py-32">
+      {/* Pe telefon formularul vine imediat după introducere; datele de contact coboară sub el. */}
+      <div className="mx-auto grid max-w-[1400px] gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-[auto_1fr] lg:gap-x-24 lg:gap-y-0">
         <div>
           <h2 className="display display-md reveal max-w-[16ch]">Ce ne spui acum ne ajută să venim pregătiți.</h2>
           <p className="mt-6 max-w-[46ch] text-ink-soft">
             Data și numărul aproximativ de invitați sunt suficiente pentru o primă discuție. Restul îl stabilim
             împreună.
           </p>
-
-          {(settings.phone || settings.email || settings.address || links.length > 0) && (
-            <dl className="mt-12 space-y-6 border-t border-line pt-8">
-              {settings.phone && (
-                <div>
-                  <dt className="text-[0.9375rem] text-ink-soft">Telefon</dt>
-                  <dd className="mt-1 text-[1.25rem] font-medium">
-                    <a href={`tel:${settings.phone.replace(/\s+/g, "")}`} className="hover:text-magenta">
-                      {settings.phone}
-                    </a>
-                  </dd>
-                </div>
-              )}
-              {settings.email && (
-                <div>
-                  <dt className="text-[0.9375rem] text-ink-soft">Email</dt>
-                  <dd className="mt-1 text-[1.25rem] font-medium">
-                    <a href={`mailto:${settings.email}`} className="break-all hover:text-magenta">
-                      {settings.email}
-                    </a>
-                  </dd>
-                </div>
-              )}
-              {settings.address && (
-                <div>
-                  <dt className="text-[0.9375rem] text-ink-soft">Adresă</dt>
-                  <dd className="mt-1 whitespace-pre-line">{settings.address}</dd>
-                </div>
-              )}
-              {links.length > 0 && (
-                <div>
-                  <dt className="text-[0.9375rem] text-ink-soft">Ne găsești și pe</dt>
-                  <dd className="mt-2 flex flex-wrap gap-x-6 gap-y-2">
-                    {links.map((link) => (
-                      <a
-                        key={link.label}
-                        href={link.href}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="border-b border-ink/30 pb-0.5 hover:border-magenta hover:text-magenta"
-                      >
-                        {link.label}
-                      </a>
-                    ))}
-                  </dd>
-                </div>
-              )}
-            </dl>
-          )}
         </div>
 
-        <div>
+        <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
           {status === "sent" ? (
             <div className="border-t border-magenta pt-8" role="status">
               <p className="display display-sm">Am primit cererea ta.</p>
@@ -210,7 +159,16 @@ export function ContactForm() {
                 />
               </Field>
               <Field label="Tipul evenimentului" htmlFor="cf-type">
-                <select id="cf-type" value={values.event_type} onChange={update("event_type")} className={fieldClass}>
+                <select
+                  id="cf-type"
+                  required
+                  value={values.event_type}
+                  onChange={update("event_type")}
+                  className={`${fieldClass} invalid:text-ink-soft [&>option]:text-ink`}
+                >
+                  <option value="" disabled>
+                    Alege tipul
+                  </option>
                   {EVENT_TYPES.map((type) => (
                     <option key={type.value} value={type.value}>
                       {type.label}
@@ -297,6 +255,57 @@ export function ContactForm() {
             </form>
           )}
         </div>
+
+        {(settings.phone || settings.email || settings.address || links.length > 0) && (
+          <div className="lg:col-start-1 lg:row-start-2">
+            <dl className="space-y-6 border-t border-line pt-8 lg:mt-12">
+              {settings.phone && (
+                <div>
+                  <dt className="text-[0.9375rem] text-ink-soft">Telefon</dt>
+                  <dd className="mt-1 text-[1.25rem] font-medium">
+                    <a href={`tel:${settings.phone.replace(/\s+/g, "")}`} className="hover:text-magenta">
+                      {settings.phone}
+                    </a>
+                  </dd>
+                </div>
+              )}
+              {settings.email && (
+                <div>
+                  <dt className="text-[0.9375rem] text-ink-soft">Email</dt>
+                  <dd className="mt-1 text-[1.25rem] font-medium">
+                    <a href={`mailto:${settings.email}`} className="break-all hover:text-magenta">
+                      {settings.email}
+                    </a>
+                  </dd>
+                </div>
+              )}
+              {settings.address && (
+                <div>
+                  <dt className="text-[0.9375rem] text-ink-soft">Adresă</dt>
+                  <dd className="mt-1 whitespace-pre-line">{settings.address}</dd>
+                </div>
+              )}
+              {links.length > 0 && (
+                <div>
+                  <dt className="text-[0.9375rem] text-ink-soft">Ne găsești și pe</dt>
+                  <dd className="mt-2 flex flex-wrap gap-x-6 gap-y-2">
+                    {links.map((link) => (
+                      <a
+                        key={link.label}
+                        href={link.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="border-b border-ink/30 pb-0.5 hover:border-magenta hover:text-magenta"
+                      >
+                        {link.label}
+                      </a>
+                    ))}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </div>
+        )}
       </div>
     </section>
   );
