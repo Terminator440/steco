@@ -1,9 +1,21 @@
 {
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!_vercel/).*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "images": {
+    "sizes": [256, 384, 640, 828, 1080, 1200, 1920],
+    "qualities": [75, 80, 85],
+    "formats": ["image/webp"],
+    "minimumCacheTTL": 2678400,
+    "remotePatterns": [
+      {
+        "protocol": "https",
+        "hostname": "ptmtftxihrxbdkcrxtgh.supabase.co",
+        "pathname": "^/storage/v1/object/public/steco-images/.*$"
+      }
+    ]
+  }
 }
-

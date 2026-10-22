@@ -1,5 +1,12 @@
 const SUPABASE_PUBLIC_PATH_FRAGMENT = "/storage/v1/object/public/";
 
+// Planul gratuit Supabase nu micșorează pozele, așa că pe site le micșorează Vercel
+// (/_vercel/image, configurat în vercel.json la „images”). Lățimea și calitatea cerute
+// trebuie să fie din listele de acolo, altfel Vercel răspunde cu eroare.
+const VERCEL_IMAGES = import.meta.env.PROD;
+const VERCEL_SIZES = [256, 384, 640, 828, 1080, 1200, 1920];
+const VERCEL_QUALITIES = [75, 80, 85];
+
 export function isSupabasePublicImage(url) {
   if (!url || typeof url !== "string") return false;
   if (!/^https?:\/\//.test(url)) return false;
@@ -12,32 +19,36 @@ export function isSupabasePublicImage(url) {
   }
 }
 
-export function withSupabaseImageParams(url, options = {}) {
-  if (!url || typeof url !== "string") return "";
-  if (!/^https?:\/\//.test(url)) return url;
-
-  const { width, height, quality = 80 } = options;
-
-  try {
-    const parsedUrl = new URL(url);
-    if (!parsedUrl.pathname.includes(SUPABASE_PUBLIC_PATH_FRAGMENT)) {
-      return url;
-    }
-
-    if (width) parsedUrl.searchParams.set("width", String(width));
-    if (height) parsedUrl.searchParams.set("height", String(height));
-    if (quality) parsedUrl.searchParams.set("quality", String(quality));
-
-    return parsedUrl.toString();
-  } catch {
-    return url;
-  }
+function closestAtLeast(list, value) {
+  return list.find((item) => item >= value) || list[list.length - 1];
 }
 
-export function buildSupabaseSrcSet(url, widths = [], quality = 80) {
-  if (!isSupabasePublicImage(url) || !widths.length) return "";
+// Păstrează numele vechi: componentele cer o lățime, iar pe site primesc poza micșorată de Vercel.
+// Local (vite dev) poza rămâne cea originală.
+export function withSupabaseImageParams(url, options = {}) {
+  if (!url || typeof url !== "string") return "";
+  if (!VERCEL_IMAGES || !isSupabasePublicImage(url)) return url;
 
-  return widths
-    .map((width) => `${withSupabaseImageParams(url, { width, quality })} ${width}w`)
-    .join(", ");
+  const { width = 1080, quality = 80 } = options;
+  const params = new URLSearchParams({
+    url,
+    w: String(closestAtLeast(VERCEL_SIZES, width)),
+    q: String(closestAtLeast(VERCEL_QUALITIES, quality))
+  });
+  return `/_vercel/image?${params}`;
+}
+
+// Dacă Vercel nu poate micșora o poză (de exemplu limita lunară a planului gratuit e atinsă),
+// imaginea cade pe originalul din Supabase în loc să rămână goală.
+export function fallbackToOriginalImages() {
+  document.addEventListener(
+    "error",
+    (event) => {
+      const img = event.target;
+      if (!(img instanceof HTMLImageElement) || !img.src.includes("/_vercel/image")) return;
+      const original = new URL(img.src).searchParams.get("url");
+      if (original) img.src = original;
+    },
+    true
+  );
 }
