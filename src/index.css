@@ -335,6 +335,32 @@ body {
   }
 }
 
+/* Inversul lui .page-in, pentru închiderea meniului: rândurile coboară și se sting.
+   Curba accelerează, dar pornește imediat, ca apăsarea pe „Închide” să se simtă pe loc.
+   Durata și pașii sunt și în Navbar.jsx (OUT_DURATION, FADE_DURATION). */
+.page-out {
+  animation: page-out 0.5s cubic-bezier(0.4, 0, 1, 1) both;
+  animation-delay: var(--d, 0s);
+}
+
+@keyframes page-out {
+  to {
+    opacity: 0;
+    transform: translate3d(0, 1.5rem, 0);
+  }
+}
+
+.menu-out {
+  animation: fade-out 0.3s ease-in both;
+  animation-delay: var(--d, 0s);
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
 .lightbox::backdrop {
   background: rgba(29, 18, 48, 0.94);
 }
@@ -345,6 +371,8 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .page-in,
+  .page-out,
+  .menu-out,
   .lightbox[open] {
     animation: none;
   }
